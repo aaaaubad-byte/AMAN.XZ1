@@ -1,0 +1,22 @@
+# Android & Gradle
+.gradle/
+build/
+app/build/
+local.properties
+*.apk
+*.aab
+*.keystore
+*.jks
+
+# IDE & OS
+.idea/
+*.iml
+.DS_Store
+*.log
+
+# Web container artifacts
+node_modules/
+dist/
+coverage/
+.env*
+!.env.example

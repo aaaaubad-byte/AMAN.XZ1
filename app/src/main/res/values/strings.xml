@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">AMAN | أمان</string>
+    <string name="slogan">أمان حماية وضمان</string>
+    
+    <!-- Auth -->
+    <string name="welcome_title">مرحباً بك</string>
+    <string name="welcome_subtitle">أمان حماية رقم حسابك</string>
+    <string name="login">تسجيل الدخول</string>
+    <string name="create_account">إنشاء حساب جديد</string>
+    <string name="email_or_phone">البريد الإلكتروني أو رقم الهاتف</string>
+    <string name="password">كلمة المرور</string>
+    <string name="forgot_password">نسيت كلمة المرور؟</string>
+    <string name="no_account">ليس لديك حساب؟ سجل الآن</string>
+    <string name="have_account">لديك حساب بالفعل؟ سجل الدخول</string>
+    <string name="full_name">الاسم الكامل</string>
+    <string name="phone_number">رقم الهاتف</string>
+    <string name="governorate">المحافظة</string>
+
+    <!-- Navigation -->
+    <string name="nav_home">الرئيسية</string>
+    <string name="nav_my_numbers">أرقامي</string>
+    <string name="nav_requests">طلبات الحماية</string>
+    <string name="nav_protections">الحمايات</string>
+    <string name="nav_notifications">الإشعارات</string>
+    <string name="nav_profile">حسابي</string>
+    <string name="nav_admin_dashboard">لوحة الإدارة</string>
+
+    <!-- Actions & Status -->
+    <string name="add_new_number">إضافة رقم جديد</string>
+    <string name="request_protection">طلب حماية جديد</string>
+    <string name="status_protected">محمي</string>
+    <string name="status_unprotected">غير محمي</string>
+    <string name="status_pending">قيد المراجعة</string>
+    <string name="status_approved">مقبول</string>
+    <string name="status_rejected">مرفوض</string>
+    <string name="status_completed">مكتمل</string>
+    <string name="status_due">مستحق</string>
+    <string name="confirm">تأكيد</string>
+    <string name="cancel">إلغاء</string>
+    <string name="retry">إعادة المحاولة</string>
+    <string name="error_network">تعذر الاتصال بالشبكة، يرجى المحاولة لاحقاً</string>
+    <string name="empty_numbers">لا توجد أرقام مسجلة حتى الآن</string>
+</resources>

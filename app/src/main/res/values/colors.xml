@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Brand Palette extracted from AMAN visual guide -->
+    <color name="primary">#087F6E</color>
+    <color name="primary_variant">#065B4F</color>
+    <color name="secondary">#19B99A</color>
+    <color name="secondary_variant">#139178</color>
+    <color name="accent">#6EE7B7</color>
+    <color name="light_teal">#E9F8F5</color>
+    <color name="background">#F7FAF9</color>
+    <color name="surface">#FFFFFF</color>
+    
+    <!-- Text Colors -->
+    <color name="text_primary">#18302D</color>
+    <color name="text_secondary">#667A77</color>
+    <color name="text_disabled">#9EAEAC</color>
+    <color name="border">#DCE9E6</color>
+    
+    <!-- Status Colors -->
+    <color name="status_protected_bg">#E9F8F5</color>
+    <color name="status_protected_text">#087F6E</color>
+    <color name="status_pending_bg">#FEF3C7</color>
+    <color name="status_pending_text">#D97706</color>
+    <color name="status_approved_bg">#D1FAE5</color>
+    <color name="status_approved_text">#059669</color>
+    <color name="status_rejected_bg">#FEE2E2</color>
+    <color name="status_rejected_text">#DC2626</color>
+    <color name="status_due_bg">#FFEDD5</color>
+    <color name="status_due_text">#C2410C</color>
+</resources>
