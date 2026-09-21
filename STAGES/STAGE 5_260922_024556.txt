@@ -1,0 +1,1291 @@
+AMAN.XZ1 — Stage 5: Full Integration, QA, Security & Release
+
+ROLE
+
+You are now executing Stage 5 — the final stage of the AMAN.XZ1 Android project.
+
+This is a real production-oriented Android application, not a prototype, mockup, web application, PWA, desktop application, or WebView wrapper.
+
+The only authoritative functional reference is:
+
+AMAN.XZ.txt
+
+Use the already implemented Stage 1, Stage 2, Stage 3, and Stage 4 code as the implementation baseline, but verify it against the authoritative reference and the actual database/backend behavior.
+
+Do not blindly trust previous implementation reports.
+
+Your workflow for this stage is strictly:
+
+IMPLEMENT → TEST → VERIFY → REPORT → COMMIT → PUSH → STOP
+
+Do not begin another stage after this one. This is the final stage.
+
+1. FINAL OBJECTIVE
+
+Bring the entire AMAN.XZ1 project to a verified release-ready state by performing a complete:
+
+• Android build verification
+
+• Customer-flow verification
+
+• Administration-flow verification
+
+• Supabase integration verification
+
+• Database/RLS/security verification
+
+• Authentication/session verification
+
+• Business-rule verification
+
+• Concurrency/idempotency verification
+
+• UI/navigation verification
+
+• Error-state verification
+
+• Regression test
+
+• Release-build verification
+
+• Code-quality review
+
+• Secrets/security review
+
+Do not merely inspect source code.
+
+Where possible, execute the application, execute tests, execute database tests/migrations, and verify real behavior.
+
+Do not claim that something works unless there is evidence.
+
+2. SOURCE OF TRUTH
+
+Use:
+
+AMAN.XZ.txt
+
+as the authoritative product specification.
+
+Also inspect the actual implementation from Stages 1–4.
+
+If the implementation conflicts with the reference:
+
+• Identify the conflict.
+
+• Determine whether the reference explicitly resolves it.
+
+• Correct the implementation when the reference requires it.
+
+• Do not silently invent a new business rule.
+
+• Document every significant correction in the final report.
+
+Do not revive requirements from old AMAN projects, old repositories, previous implementations, or obsolete specifications.
+
+3. REAL ANDROID APPLICATION VERIFICATION
+
+Confirm that AMAN.XZ1 is a genuine Android Studio/Gradle project.
+
+Verify:
+
+• Kotlin
+
+• Android Gradle configuration
+
+• AndroidManifest
+
+• application module
+
+• Android resources
+
+• Compose/XML implementation as actually used by the project
+
+• AndroidX
+
+• Navigation
+
+• ViewModel
+
+• StateFlow/Flow where applicable
+
+• proper lifecycle handling
+
+• APK generation
+
+• AAB generation where configured
+
+The application must not depend on:
+
+• WebView as the application itself
+
+• PWA packaging
+
+• browser execution
+
+• fake local-only backend
+
+• mock authentication
+
+• fake persistence
+
+If any of these are found, correct them and document the correction.
+
+4. SUPABASE END-TO-END VERIFICATION
+
+Verify the actual Supabase integration.
+
+Check:
+
+• Supabase URL configuration
+
+• publishable/anon key handling
+
+• no service-role/admin secret inside the APK
+
+• authentication
+
+• access token handling
+
+• refresh token/session restoration
+
+• logout
+
+• database requests
+
+• RPC calls
+
+• error handling
+
+• authorization
+
+• RLS behavior
+
+• authenticated/unauthenticated behavior
+
+Do not hardcode private credentials.
+
+Search the entire repository for:
+
+• service_role
+
+• secret keys
+
+• private keys
+
+• passwords
+
+• tokens
+
+• credentials
+
+• accidentally committed .env secrets
+
+• hardcoded production secrets
+
+Remove or secure anything that violates the project's security model.
+
+5. AUTHENTICATION VERIFICATION
+
+Verify the complete customer authentication lifecycle.
+
+Registration
+
+Confirm:
+
+• username is required
+
+• email is required
+
+• password is required
+
+• registration uses real Supabase Auth
+
+• username is stored correctly
+
+• registration does not use phone number as the login credential
+
+• no fake user/session is created
+
+Login
+
+Customer login must be:
+
+Email + Password only
+
+Do not implement phone-number login.
+
+Session
+
+Verify:
+
+• application restart
+
+• existing valid session restoration
+
+• expired access token handling
+
+• refresh behavior
+
+• invalid session handling
+
+• logout
+
+• post-logout access protection
+
+If email confirmation is enabled, do not create a fake authenticated state.
+
+6. CUSTOMER DATA ISOLATION
+
+Perform actual security verification for customer isolation.
+
+Customer A must not be able to:
+
+• read Customer B's profile
+
+• read Customer B's phone numbers
+
+• read Customer B's protection requests
+
+• read Customer B's protections
+
+• read Customer B's notifications
+
+• manipulate Customer B's data
+
+• access administrative data
+
+• access audit logs
+
+• access internal task configuration
+
+• access manager-only settings
+
+Do not rely on UI hiding.
+
+Verify database/RLS/backend enforcement directly.
+
+Test both:
+
+• legitimate access
+
+• deliberately unauthorized access attempts
+
+7. CUSTOMER PHONE NUMBER VERIFICATION
+
+Verify that:
+
+• one customer can own multiple phone numbers
+
+• each phone number belongs to one customer
+
+• duplicate numbers are rejected
+
+• adding a phone number does NOT activate protection
+
+• phone numbers remain independent from protection activation
+
+• customer cannot manually choose the telecom provider
+
+Provider identification must be based on the configured prefix/provider data.
+
+Test:
+
+• valid number
+
+• invalid number
+
+• unsupported prefix
+
+• disabled provider
+
+• duplicate number
+
+• multiple numbers for one customer
+
+8. PROTECTION REQUEST END-TO-END TEST
+
+Execute the complete real customer flow:
+
+• Customer logs in.
+
+• Customer selects one of their phone numbers.
+
+• System identifies the telecom provider.
+
+• Available protection plans are loaded from the backend.
+
+• Customer selects a valid plan.
+
+• Real price is retrieved.
+
+• Customer selects a valid payment method.
+
+• Customer enters the required payment information.
+
+• Customer reviews the request.
+
+• Customer submits the request.
+
+• Backend validates the request.
+
+• Backend creates the pending request.
+
+• Customer sees the correct resulting state.
+
+Verify that customer cannot directly create an active protection.
+
+Verify duplicate/overlap prevention.
+
+The following must be blocked where applicable:
+
+• unresolved active request
+
+• existing active protection
+
+• overlapping active protection/subscription
+
+• invalid phone ownership
+
+• invalid provider
+
+• invalid plan
+
+• invalid payment method
+
+• malformed payment reference
+
+9. ADMIN APPROVAL END-TO-END TEST
+
+Execute a complete real administrative approval flow.
+
+Verify:
+
+• Manager authenticates.
+
+• Pending protection request is visible.
+
+• Manager opens the request.
+
+• Manager reviews the request details.
+
+• Manager approves it.
+
+• Backend performs the operation atomically.
+
+• Protection is created.
+
+• Historical values are snapshotted.
+
+• First payment task is created.
+
+• Notification is created.
+
+• Audit log is created.
+
+• State transition is recorded.
+
+• All related records remain consistent.
+
+Verify rollback.
+
+Intentionally test a failure condition where possible and confirm that a partially completed approval does not remain in the database.
+
+There must never be a state where approval succeeds visually while only some of the required records were created.
+
+10. APPROVAL IDEMPOTENCY / CONCURRENCY
+
+Test:
+
+• double approval
+
+• repeated approval request
+
+• two administrators attempting the same approval
+
+• approval after rejection
+
+• rejection after approval
+
+• repeated rejection
+
+• duplicate submission
+
+The backend must be authoritative.
+
+Android-side flags, local Sets, temporary state, or UI disabling alone are not acceptable protection against duplicate operations.
+
+11. PROTECTION LIFECYCLE
+
+Verify the complete protection lifecycle:
+
+• newly created protection
+
+• active protection
+
+• needs-renewal display state
+
+• expired protection
+
+"Needs renewal" must remain a calculated/display state rather than an incorrectly stored independent lifecycle state.
+
+Verify the configured protection duration.
+
+The current authoritative business rule is:
+
+365 days
+
+unless the actual AMAN.XZ.txt reference explicitly establishes another value.
+
+Historical protection data must preserve its creation-time values.
+
+Changing a plan later must not rewrite historical protection data.
+
+12. PAYMENT TASK VERIFICATION
+
+Verify the complete task lifecycle.
+
+Required statuses:
+
+• UPCOMING
+
+• DUE_SOON
+
+• DUE
+
+• OVERDUE
+
+• COMPLETED
+
+• CANCELLED
+
+Verify classification rules:
+
+• date difference < 0 → OVERDUE
+
+• date difference = 0 → DUE
+
+• date difference within the configured due-soon window → DUE_SOON
+
+• later dates → UPCOMING
+
+• COMPLETED remains final
+
+• CANCELLED remains final
+
+Verify:
+
+• first task creation
+
+• task completion
+
+• payment reference
+
+• execution timestamp
+
+• notes
+
+• amount snapshot
+
+• result
+
+• next-task creation
+
+• cancellation
+
+• rescheduling where permitted
+
+• prevention of completing cancelled tasks
+
+The current operational cycle is configurable and must not be blindly hardcoded.
+
+The default/reference cycle is:
+
+90 days
+
+where applicable.
+
+Historical task snapshots must not change when task settings change later.
+
+13. CUSTOMER INFORMATION PRIVACY
+
+Verify that the customer-facing application does NOT expose internal operational information that the customer is not supposed to see.
+
+In particular, do not expose internal:
+
+• periodic payment amount
+
+• internal payment dates
+
+• operational cycle configuration
+
+• internal payment methods
+
+• manager-only task configuration
+
+• audit information
+
+• internal financial/operational records
+
+Only information explicitly intended for the customer by AMAN.XZ.txt should be displayed.
+
+14. ADMINISTRATION VERIFICATION
+
+Verify all implemented administration areas:
+
+• Dashboard
+
+• Customers
+
+• Protection Requests
+
+• Protections
+
+• Telecom Providers
+
+• Protection Plans
+
+• Payment Methods
+
+• Payment Tasks
+
+• Notifications
+
+• System Settings
+
+• Task Settings
+
+• Audit/History
+
+• Account/Security
+
+For every screen verify:
+
+• real backend data
+
+• loading state
+
+• empty state
+
+• success state
+
+• failure state
+
+• retry behavior
+
+• authorization
+
+• correct navigation
+
+• correct mutation behavior
+
+No screen may depend on placeholder/mock data.
+
+15. ADMIN AUTHORIZATION
+
+Verify that administrative authorization is enforced by the backend/database.
+
+Do not create unsupported role hierarchies.
+
+The project must follow the manager/admin model established by the reference.
+
+UI hiding is not authorization.
+
+Test direct unauthorized database/API/RPC access where possible.
+
+16. TELECOM PROVIDER VERIFICATION
+
+Verify management of:
+
+• provider name
+
+• provider code
+
+• prefixes
+
+• number length
+
+• enabled/disabled
+
+• customer visibility
+
+• display order
+
+Verify that historical references are preserved.
+
+Do not delete providers when deletion would break historical records.
+
+Verify provider detection against actual configured data.
+
+17. PROTECTION PLAN VERIFICATION
+
+Verify:
+
+• provider association
+
+• plan name/details where applicable
+
+• price
+
+• duration
+
+• enabled/disabled
+
+• customer visibility
+
+• historical snapshot behavior
+
+Changing a current plan must not modify historical protections.
+
+18. PAYMENT METHOD VERIFICATION
+
+Verify:
+
+• creation
+
+• editing
+
+• enabling/disabling
+
+• customer visibility
+
+• ordering/display behavior
+
+• historical references
+
+Do not expose manager-only configuration to customers.
+
+19. NOTIFICATION VERIFICATION
+
+Verify:
+
+• notification creation
+
+• correct recipient
+
+• unread state
+
+• read state
+
+• opening/marking as read
+
+• customer isolation
+
+• admin/manager notifications where defined
+
+• no cross-customer visibility
+
+20. AUDIT AND STATE HISTORY
+
+Verify that sensitive operations generate appropriate audit/history records.
+
+At minimum inspect:
+
+• approval
+
+• rejection
+
+• protection creation
+
+• task completion
+
+• task cancellation
+
+• task rescheduling
+
+• sensitive configuration changes
+
+• other protected operations defined by the reference
+
+Audit information must remain inaccessible to ordinary customers.
+
+Verify state transition history where implemented.
+
+21. SYSTEM SETTINGS AND TASK SETTINGS
+
+Verify the distinction between:
+
+system_settings
+
+General application/business settings such as:
+
+• app name
+
+• contact information
+
+• terms
+
+• privacy
+
+• other settings defined by the reference
+
+task_settings
+
+Operational task configuration such as:
+
+• first task enabled/disabled
+
+• first task amount
+
+• recurring task enabled/disabled
+
+• recurring amount
+
+• repeat interval
+
+• days-before display
+
+• rescheduling permission
+
+Changing settings must not retroactively modify historical snapshots.
+
+22. UI / UX FINAL REVIEW
+
+Review the entire application visually and functionally.
+
+Verify:
+
+• Arabic RTL behavior
+
+• Cairo font where specified
+
+• AMAN branding
+
+• correct colors
+
+• consistent spacing
+
+• correct icons
+
+• correct navigation
+
+• drawer behavior
+
+• no unintended bottom navigation
+
+• loading indicators
+
+• error messages
+
+• empty states
+
+• confirmations
+
+• back navigation
+
+• orientation/lifecycle behavior
+
+• accessibility basics
+
+• keyboard behavior
+
+• scrolling
+
+• long Arabic text
+
+• small and large screens where possible
+
+Do not redesign the product unnecessarily.
+
+Preserve the established AMAN visual identity unless a defect must be corrected.
+
+23. SECURITY REVIEW
+
+Perform a final security audit covering:
+
+Android
+
+• exported activities/services/receivers
+
+• intent exposure
+
+• manifest permissions
+
+• debug configuration
+
+• release configuration
+
+• backup behavior where relevant
+
+• cleartext traffic
+
+• sensitive logging
+
+• secret storage
+
+• token handling
+
+Supabase
+
+• RLS
+
+• RPC authorization
+
+• ownership checks
+
+• manager authorization
+
+• insert/update/delete authorization
+
+• direct table access
+
+• sensitive function exposure
+
+• SECURITY DEFINER functions where used
+
+• search_path/security configuration where relevant
+
+• privilege escalation paths
+
+Repository
+
+Search for:
+
+• API secrets
+
+• service-role keys
+
+• passwords
+
+• access tokens
+
+• private keys
+
+• credentials
+
+• accidental local configuration commits
+
+Never commit secrets.
+
+24. AUTOMATED TESTS
+
+Run the available automated tests.
+
+Add or correct tests where required for the final implementation.
+
+At minimum cover:
+
+• authentication
+
+• session restoration
+
+• customer isolation
+
+• duplicate phone numbers
+
+• provider detection
+
+• protection request validation
+
+• duplicate request prevention
+
+• approval
+
+• double approval
+
+• rejection
+
+• rollback
+
+• historical snapshots
+
+• task classification
+
+• task completion
+
+• cancelled-task protection
+
+• next-task creation
+
+• notification ownership
+
+• admin authorization
+
+• RLS
+
+Do not merely report that tests exist.
+
+Run them and report actual results.
+
+25. BUILD VERIFICATION
+
+Perform at least:
+
+Debug build
+
+Verify successful compilation.
+
+Release build
+
+Verify successful release compilation.
+
+APK
+
+Generate an APK if the project is configured for APK output.
+
+AAB
+
+Generate an Android App Bundle if release configuration supports it.
+
+Record:
+
+• build command
+
+• result
+
+• relevant warnings
+
+• relevant errors
+
+• generated artifact names/locations
+
+Do not claim an artifact exists unless it was actually generated.
+
+26. DATABASE/MIGRATION VERIFICATION
+
+Verify that:
+
+• all migrations apply correctly
+
+• schema is internally consistent
+
+• foreign keys are valid
+
+• indexes exist where necessary
+
+• constraints work
+
+• RLS policies work
+
+• RPC/functions compile and execute
+
+• no obsolete schema is accidentally required by the Android application
+
+Check that Kotlin models/repositories match actual backend contracts.
+
+Do not treat Kotlin models as the database source of truth.
+
+27. ERROR HANDLING
+
+Test realistic failures:
+
+• no internet
+
+• timeout
+
+• expired session
+
+• unauthorized operation
+
+• validation error
+
+• duplicate operation
+
+• backend error
+
+• RPC failure
+
+• empty response
+
+• malformed response
+
+The application must fail safely.
+
+Do not show fake success after backend failure.
+
+Do not silently swallow critical errors.
+
+28. PERFORMANCE / STABILITY CHECK
+
+Perform a reasonable final review for:
+
+• unnecessary repeated network calls
+
+• duplicate requests
+
+• lifecycle leaks
+
+• incorrect StateFlow collection
+
+• stale UI state
+
+• race conditions
+
+• blocking work on the main thread
+
+• obvious memory leaks
+
+• repeated database queries
+
+• infinite loading states
+
+Do not perform premature large-scale optimization.
+
+Correct concrete problems discovered during verification.
+
+29. FINAL SOURCE-OF-TRUTH AUDIT
+
+Compare the final implementation against AMAN.XZ.txt.
+
+Create an internal checklist covering every major requirement.
+
+For each requirement classify it as:
+
+• VERIFIED
+
+• PARTIALLY VERIFIED
+
+• NOT VERIFIED
+
+• BLOCKED
+
+Do not mark something VERIFIED merely because code appears to exist.
+
+Use actual execution/testing evidence where possible.
+
+30. NO FAKE COMPLETION
+
+Never claim:
+
+• "production ready"
+
+• "fully secure"
+
+• "all tests passed"
+
+• "APK generated"
+
+• "Supabase works"
+
+• "RLS works"
+
+• "admin approval works"
+
+unless the corresponding evidence exists.
+
+If a limitation prevents verification, explicitly state:
+
+• what could not be tested
+
+• why
+
+• what evidence was available
+
+• what remains uncertain
+
+31. FIXES DURING STAGE 5
+
+You are authorized to correct implementation defects discovered during this final stage.
+
+Prioritize:
+
+• security defects
+
+• broken authentication/session behavior
+
+• broken database/RLS behavior
+
+• broken business logic
+
+• broken customer/admin workflows
+
+• data-integrity problems
+
+• crashes/build failures
+
+• serious UI/navigation defects
+
+• minor polish
+
+Do not introduce unrelated features.
+
+Do not expand scope beyond the reference.
+
+32. FINAL REGRESSION
+
+After fixes, rerun the affected tests.
+
+Then perform a final end-to-end regression:
+
+Customer
+
+Register → Login → Session Restore → Add Number → Detect Provider → Submit Request → Receive Result → View Protection → Notifications → Logout
+
+Manager
+
+Login → Dashboard → Review Request → Approve → Verify Protection → Verify Task → Verify Notification → Review Audit → Configure Settings → Logout
+
+Verify that the two workflows remain consistent with one another.
+
+33. FINAL REPORT
+
+Before committing, create a detailed final report containing:
+
+A. Executive Summary
+
+What was verified and what was corrected.
+
+B. Source-of-Truth Audit
+
+Requirement status from AMAN.XZ.txt.
+
+C. Android Verification
+
+Project structure, build, APK/AAB results.
+
+D. Authentication
+
+Registration, login, session, logout.
+
+E. Customer Application
+
+All major customer workflows.
+
+F. Administration
+
+All major manager workflows.
+
+G. Database
+
+Schema, migrations, constraints, indexes.
+
+H. RLS / Security
+
+Customer isolation and admin authorization.
+
+I. RPC / Business Logic
+
+Sensitive operations and atomicity.
+
+J. Payment Tasks
+
+Statuses, classification, completion, cancellation, next task.
+
+K. Historical Snapshots
+
+Evidence that historical values remain stable.
+
+L. Tests
+
+Every executed test and actual result.
+
+M. Build
+
+Debug/release/APK/AAB results.
+
+N. Security Scan
+
+Secrets and configuration review.
+
+O. Remaining Issues
+
+List every remaining issue or uncertainty.
+
+For each issue include:
+
+• severity
+
+• affected area
+
+• exact reason
+
+• whether it blocks release
+
+• recommended next action
+
+P. Final Verification Matrix
+
+Use:
+
+AreaStatusEvidenceAndroid projectSupabaseAuthenticationCustomer isolationCustomer appAdmin appProtection workflowPayment tasksNotificationsRLSRPCAudit logsUI/UXTestsRelease buildSecurity 
+
+Do not use a subjective score.
+
+34. GIT COMMIT
+
+After all implementation and verification work is complete:
+
+Create a Git commit:
+
+feat: complete AMAN final integration and release verification
+
+Before committing:
+
+• inspect changed files
+
+• ensure no secrets are included
+
+• ensure no temporary/debug artifacts are committed
+
+• ensure generated build artifacts are handled according to the repository's configuration
+
+• ensure migrations and source changes are included
+
+35. PUSH TO GITHUB
+
+Push the final commit to:
+
+AMAN.XZ1
+
+Use the configured Git remote.
+
+Do not create another repository.
+
+Do not overwrite unrelated history.
+
+Confirm that the push succeeds.
+
+Report the final commit hash.
+
+36. FINAL STOP CONDITION
+
+After the push succeeds:
+
+STOP.
+
+Do not:
+
+• start another implementation stage
+
+• create additional features
+
+• refactor unrelated code
+
+• continue working automatically
+
+• create another repository
+
+The project is now at the final stage.
+
+37. FINAL VERDICT
+
+End the report with exactly one of these:
+
+READY FOR RELEASE
+
+Use only if the final implementation, security, tests, builds, and critical workflows have been sufficiently verified with no release-blocking issue.
+
+READY WITH DOCUMENTED BLOCKERS
+
+Use when the implementation is substantially complete but one or more clearly documented limitations remain that prevent full verification or require an external action.
+
+NOT READY FOR RELEASE
+
+Use when critical functionality, security, database integrity, authentication, build, or core customer/admin workflows remain broken or unverified.
+
+Do not use subjective scoring or rankings.
+
+FINAL EXECUTION RULE
+
+Execute only Stage 5.
+
+Follow exactly:
+
+IMPLEMENT → TEST → VERIFY → REPORT → COMMIT → PUSH → STOP
+
+Do not stop after merely reviewing the code.
+
+Do not claim success without evidence.
+
+Do not begin another stage after completion.
+
+The final deliverable is the verified AMAN.XZ1 project plus the detailed final verification report.

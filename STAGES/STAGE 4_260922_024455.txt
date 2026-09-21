@@ -1,0 +1,1273 @@
+AMAN | أمان
+
+Stage 4 — Administration
+
+You are now working on the real Android project:
+
+AMAN | أمان
+
+Repository:
+
+AMAN.XZ1
+
+Authoritative functional reference:
+
+AMAN.XZ.txt
+
+Completed stages:
+
+• Stage 1 — Foundation / Android Architecture / Secure Supabase Integration
+
+• Stage 2 — Database / Security / RLS / Core Business Logic
+
+• Stage 3 — Customer Application
+
+This stage is strictly for:
+
+ADMINISTRATION
+
+Do NOT redesign or rebuild the Customer Application unless a genuine integration issue requires a minimal correction.
+
+Do NOT start Stage 5.
+
+Follow the mandatory workflow:
+
+IMPLEMENT → TEST → VERIFY → REPORT → COMMIT → PUSH → STOP
+
+1. Objective
+
+Implement the complete AMAN Administration Application/UI and connect it to the real backend implemented in Stages 1–3.
+
+The administrator must be able to securely operate the AMAN system through real database operations.
+
+The Administration layer must support the administrative functionality defined in AMAN.XZ.txt, including:
+
+• Secure administrator authentication.
+
+• Administration dashboard.
+
+• Customer management.
+
+• Customer phone-number visibility where authorized.
+
+• Protection-request management.
+
+• Protection approval/rejection.
+
+• Protection management.
+
+• Telecom-provider management.
+
+• Protection-plan management.
+
+• Payment-method management.
+
+• Payment-task management.
+
+• Task completion/rescheduling/cancellation where authorized.
+
+• System settings.
+
+• Task settings.
+
+• Notifications where required.
+
+• Audit/history visibility where explicitly allowed.
+
+• Administrative account/security management.
+
+Do not invent additional administrative roles or organizational hierarchies.
+
+2. Administrative Security Is Backend-Enforced
+
+The Administration application must NEVER rely on UI visibility as its security mechanism.
+
+Administrative authorization must be enforced through:
+
+• Supabase Auth.
+
+• Database/RLS.
+
+• Secure RPC/database functions.
+
+• Backend authorization checks.
+
+A user must not become an administrator simply because the Android application displays an Admin screen.
+
+Never trust:
+
+• Client-side role values.
+
+• Local flags.
+
+• Hardcoded admin IDs.
+
+• Hidden UI routes.
+
+• Shared secrets embedded in the APK.
+
+3. Administrator Authentication
+
+Implement a dedicated administration authentication flow.
+
+The administrator must authenticate using the real Supabase authentication system.
+
+Do not create:
+
+• Fake admin sessions.
+
+• Hardcoded administrator credentials.
+
+• Fake access tokens.
+
+• Local-only admin authentication.
+
+• Secret admin passwords inside the APK.
+
+After successful authentication:
+
+• Verify that the authenticated account is actually authorized for administration.
+
+• Load the administrative application.
+
+• Reject unauthorized accounts.
+
+If authorization fails:
+
+• Do not display administrative data.
+
+• Return the user to the authentication flow.
+
+• Show a clear authorization message.
+
+4. Single Manager / Administrator Model
+
+Follow the model established by AMAN.XZ.txt and Stage 2.
+
+Do NOT introduce:
+
+• SUPER_ADMIN.
+
+• OPERATIONS.
+
+• FINANCE.
+
+• SUPPORT.
+
+• EMPLOYEE hierarchy.
+
+• Multiple invented administrator roles.
+
+If the backend defines a single authorized AMAN manager/administrator, preserve that model.
+
+Any existing role/authorization structure must be verified against the actual Stage 2 implementation before changing it.
+
+5. Administration Navigation
+
+Use a dedicated Admin Navigation Graph.
+
+Administrative areas should include the functions defined by the reference, such as:
+
+Administration ├── Dashboard ├── Customers ├── Protection Requests ├── Protections ├── Telecom Providers ├── Protection Plans ├── Payment Methods ├── Payment Tasks ├── Notifications ├── System Settings ├── Task Settings ├── Audit / History └── Account / Security 
+
+Use the exact terminology and final navigation structure supported by AMAN.XZ.txt.
+
+Do not expose administrative navigation to ordinary customers.
+
+6. Administration Dashboard
+
+Implement an administrative dashboard showing real operational information.
+
+Possible dashboard information must come from the actual backend and reference, including:
+
+• Customer count.
+
+• Phone-number count.
+
+• Pending protection requests.
+
+• Active protections.
+
+• Expired protections.
+
+• Upcoming tasks.
+
+• Due tasks.
+
+• Overdue tasks.
+
+• Completed tasks.
+
+Do not hardcode counters.
+
+Do not use mock data.
+
+The dashboard must reflect the actual database state.
+
+7. Customer Management
+
+Implement the customer-management functionality defined by the reference.
+
+The administrator should be able to:
+
+• View customers.
+
+• Search customers.
+
+• Open customer details.
+
+• View the customer's associated phone numbers.
+
+• View protection requests where authorized.
+
+• View protections where authorized.
+
+• View relevant customer activity.
+
+Do not expose unnecessary authentication secrets.
+
+Never display:
+
+• Customer passwords.
+
+• Access tokens.
+
+• Refresh tokens.
+
+• Sensitive authentication credentials.
+
+Customer data must be read through secure backend/database policies.
+
+8. Customer Details
+
+A customer details screen may include:
+
+• Customer name.
+
+• Username.
+
+• Email.
+
+• Account information.
+
+• Customer phone numbers.
+
+• Protection requests.
+
+• Active protections.
+
+• Expired protections.
+
+• Relevant notifications/history where explicitly supported.
+
+Do not allow the administrator UI to bypass backend authorization.
+
+9. Phone Numbers
+
+The administration interface must display customer phone numbers where authorized.
+
+Information may include:
+
+• Number.
+
+• Telecom provider.
+
+• Customer ownership.
+
+• Protection status.
+
+Provider identification must remain based on the database/provider rules.
+
+Do not create a second provider-detection implementation in Android.
+
+10. Protection Requests
+
+This is one of the primary administrative workflows.
+
+Implement:
+
+Protection Requests
+
+with appropriate filters such as:
+
+• Pending.
+
+• Approved.
+
+• Rejected.
+
+The administrator must be able to open a request and see the information required to make an administrative decision.
+
+11. Protection Request Details
+
+Display the relevant request information:
+
+• Customer.
+
+• Phone number.
+
+• Telecom provider.
+
+• Protection plan.
+
+• Price.
+
+• Payment method.
+
+• Payment reference/details.
+
+• Submission date.
+
+• Current status.
+
+Display rejection reason where applicable.
+
+Do not expose unrelated internal secrets.
+
+12. Approve Protection Request
+
+Approval MUST use the secure backend/RPC workflow implemented during Stage 2.
+
+The Android client must NOT independently perform a sequence of separate inserts such as:
+
+UPDATE request INSERT payment INSERT protection INSERT subscription INSERT task 
+
+unless those operations are explicitly part of the secure backend contract.
+
+The preferred operation is the atomic approval RPC implemented in Stage 2.
+
+The approval operation must guarantee the required transaction behavior.
+
+13. Atomic Approval
+
+When approving a valid pending protection request, the backend workflow must perform the required operations atomically according to the Stage 2 design.
+
+This may include:
+
+• Validate request.
+
+• Verify PENDING state.
+
+• Validate payment reference.
+
+• Change request to APPROVED.
+
+• Create customer payment record.
+
+• Create protection.
+
+• Create subscription/protection record as defined by the actual schema.
+
+• Create first payment task.
+
+• Create financial transaction where required.
+
+• Create state-transition log.
+
+• Create audit log.
+
+• Create customer notification.
+
+If any required operation fails:
+
+ROLL BACK THE TRANSACTION.
+
+The UI must report the failure.
+
+It must not display a false success message.
+
+14. Approval Idempotency
+
+The administrator must not be able to accidentally create duplicate protections by:
+
+• Double clicking.
+
+• Retrying.
+
+• Reopening a request.
+
+• Sending the same approval twice.
+
+The database/RPC layer is the final protection against duplicate approval.
+
+The Android UI should also disable the action while the request is processing.
+
+Do not rely on a local Android boolean/Set as the only duplicate-prevention mechanism.
+
+15. Reject Protection Request
+
+Implement rejection through the secure backend contract.
+
+A request can be rejected only when its current state allows rejection.
+
+The administrator should provide a rejection reason where required.
+
+The operation must:
+
+• Change the request to REJECTED.
+
+• Preserve the reason.
+
+• Record audit/history information.
+
+• Create the required customer notification.
+
+A rejected request must NOT create:
+
+• Active protection.
+
+• Subscription/protection record.
+
+• Payment task.
+
+16. Invalid State Transitions
+
+The UI must not allow invalid operations.
+
+Examples:
+
+• Approving an already approved request.
+
+• Rejecting an already rejected request.
+
+• Approving a rejected request.
+
+• Completing a cancelled task.
+
+• Cancelling a completed task.
+
+However, backend/database state-transition rules remain authoritative.
+
+The UI is only the first layer.
+
+17. Protections Management
+
+Implement the administration view for protections.
+
+The administrator should be able to inspect:
+
+• Customer.
+
+• Protected number.
+
+• Provider.
+
+• Protection plan.
+
+• Start date.
+
+• End date.
+
+• Status.
+
+Do not modify historical snapshots incorrectly.
+
+Historical protection data must preserve the values that were captured at creation.
+
+Changing a current protection plan later must not rewrite historical protection information.
+
+18. Protection Status
+
+Use the backend-defined protection state.
+
+Customer-facing states include:
+
+• Active.
+
+• Needs Renewal.
+
+• Expired.
+
+"Needs Renewal" must remain a calculated/display state according to the system rules.
+
+Do not create a conflicting Android-only protection-state system.
+
+19. Telecom Providers Management
+
+Implement the provider-management interface defined by the reference.
+
+Provider data may include:
+
+• Provider name.
+
+• Provider code.
+
+• Prefixes.
+
+• Number length.
+
+• Enabled/disabled.
+
+• Customer visibility.
+
+• Display order.
+
+The administrator should be able to perform only the operations authorized by the backend.
+
+20. Provider Deactivation
+
+If a provider is referenced by historical/customer records, do not blindly delete it.
+
+Use the database's supported deactivation mechanism.
+
+Historical records must remain valid.
+
+A disabled provider must not unexpectedly break historical protections or requests.
+
+21. Protection Plans
+
+Implement protection-plan management.
+
+The administrator should be able to manage plans according to the reference, including:
+
+• Plan name.
+
+• Provider association.
+
+• Price.
+
+• Duration/configuration supported by the schema.
+
+• Enabled/disabled state.
+
+• Customer visibility where applicable.
+
+Do not hardcode plans into Android.
+
+22. Historical Snapshot Rules
+
+When a protection is created, the relevant historical values must be preserved according to the Stage 2 schema.
+
+Changing a current plan later must NOT silently modify:
+
+• Existing protection price.
+
+• Existing protection duration.
+
+• Historical provider/plan information.
+
+• Historical payment information.
+
+The Administration UI must respect the backend snapshot model.
+
+23. Payment Methods
+
+Implement management of customer-facing payment methods.
+
+The administrator should be able to manage the methods supported by the reference, such as:
+
+• Mobile Money.
+
+• Jawali.
+
+• Future methods added by the manager.
+
+Actual account details should come from the database/settings.
+
+Do not hardcode fake payment account numbers.
+
+24. Payment Method Visibility
+
+Support the database's enabled/disabled and customer-visibility rules.
+
+A disabled method should not be offered to customers for new requests.
+
+Historical payment records must remain intact.
+
+Do not delete historical payment-method references simply because the method is no longer active.
+
+25. Payment Tasks
+
+Implement the administrative task-management interface.
+
+Task statuses include:
+
+UPCOMING DUE_SOON DUE OVERDUE COMPLETED CANCELLED 
+
+The UI must use the actual backend state.
+
+Do not recreate task status using a separate hardcoded Android algorithm if the backend already calculates it.
+
+26. Task Categories
+
+Provide appropriate administrative filters/views for:
+
+• All.
+
+• Upcoming.
+
+• Due Soon.
+
+• Due.
+
+• Overdue.
+
+• Completed.
+
+• Cancelled.
+
+Use the exact customer/admin visibility rules defined by the reference.
+
+27. Task Completion
+
+Implement task completion through the secure backend/RPC operation.
+
+The completion workflow must preserve the required information, including where applicable:
+
+• Completion reference.
+
+• Execution date/time.
+
+• Notes.
+
+• Amount snapshot.
+
+• Result.
+
+After successful completion:
+
+• Mark the task COMPLETED.
+
+• Create the next task according to the backend rules if applicable.
+
+• Record required audit/state-transition information.
+
+Do not create the next task locally in Android.
+
+28. Cancel Task
+
+Implement cancellation only through the authorized backend operation.
+
+A cancelled task must not be completed afterward.
+
+The UI must reflect the final database state.
+
+29. Reschedule Task
+
+If rescheduling is enabled by task_settings and authorized:
+
+• Allow the administrator to reschedule through the secure backend operation.
+
+• Validate the new date/time on the backend.
+
+• Preserve required history.
+
+• Record audit information.
+
+If rescheduling is disabled:
+
+• Do not offer the action.
+
+Do not bypass the backend setting.
+
+30. Task Settings
+
+Implement the administrative UI for task settings defined in the reference.
+
+Settings include the concepts supported by the database, such as:
+
+• First task enabled/disabled.
+
+• First-task amount.
+
+• Recurring task enabled/disabled.
+
+• Recurring-task amount.
+
+• Repeat interval.
+
+• Days-before display.
+
+• Rescheduling permission.
+
+The actual field names and data types must follow the Stage 2 schema.
+
+31. Historical Task Snapshots
+
+Changing task settings must NOT rewrite historical tasks.
+
+For example:
+
+If the recurring amount changes today, an already-created historical task must retain its original snapshot.
+
+The administration UI must respect this rule.
+
+32. System Settings
+
+Implement management of general application settings defined by the reference.
+
+Examples may include:
+
+• Application name.
+
+• Contact information.
+
+• Terms.
+
+• Privacy information.
+
+• Other settings explicitly defined by system_settings.
+
+Do not add unrelated settings.
+
+Changes must use the secure backend.
+
+33. Notifications
+
+Implement the administrative notification functionality explicitly defined by the reference.
+
+Where appropriate, allow the administrator/system workflow to generate customer notifications through the backend.
+
+Do not allow the Android client to forge notifications outside the supported backend contract.
+
+Customer notification ownership remains enforced by RLS.
+
+34. Audit and History
+
+If the reference/backend exposes administrative audit/history information, implement the appropriate read-only administration interface.
+
+Display relevant information such as:
+
+• Operation.
+
+• Actor.
+
+• Target.
+
+• Time.
+
+• Result.
+
+• Relevant metadata where permitted.
+
+Audit information must be treated as sensitive internal data.
+
+Customers must never have access to it.
+
+Do not allow the administrator UI to rewrite or delete audit history unless explicitly supported by the authoritative reference.
+
+35. State Transition History
+
+Where state-transition records are exposed to administrators, display the relevant history for:
+
+• Protection requests.
+
+• Protections.
+
+• Payment tasks.
+
+• Other entities explicitly supported by the backend.
+
+Do not fabricate transition history on the client.
+
+36. Account and Security
+
+Provide administrator account/security functionality supported by the reference.
+
+Include:
+
+• Account information.
+
+• Password change.
+
+• Secure logout.
+
+• Session handling.
+
+Do not expose tokens or authentication secrets.
+
+37. Repository Architecture
+
+All administrative data operations must go through the established repository/data layer.
+
+Do not place Supabase queries directly inside Composables or screens.
+
+Use the architecture established in Stage 1 and extended in Stage 3.
+
+Operations should conceptually include:
+
+loadDashboard() loadCustomers() loadCustomerDetails() loadProtectionRequests() approveProtectionRequest() rejectProtectionRequest() loadProtections() loadProviders() createProvider() updateProvider() disableProvider() loadProtectionPlans() createProtectionPlan() updateProtectionPlan() disableProtectionPlan() loadPaymentMethods() createPaymentMethod() updatePaymentMethod() disablePaymentMethod() loadPaymentTasks() completePaymentTask() cancelPaymentTask() reschedulePaymentTask() loadTaskSettings() updateTaskSettings() loadSystemSettings() updateSystemSettings() loadAuditHistory() logout() 
+
+Use the actual contracts established in Stage 2.
+
+Do not invent RPC names when existing contracts already exist.
+
+38. UI State
+
+Administrative screens must distinguish:
+
+Loading Success Empty Error Unauthorized 
+
+Never convert authorization or backend failures into empty lists.
+
+For example:
+
+catch { emptyList() } 
+
+must not be used to hide administrative failures.
+
+39. Confirmation for Destructive/Sensitive Actions
+
+For sensitive operations such as:
+
+• Rejecting a protection request.
+
+• Cancelling a task.
+
+• Disabling a provider.
+
+• Disabling a plan.
+
+• Disabling a payment method.
+
+Display an explicit confirmation step.
+
+The confirmation UI must clearly explain the action.
+
+The backend remains responsible for final authorization and validation.
+
+40. Administrative Error Handling
+
+Clearly distinguish:
+
+• Authentication failure.
+
+• Authorization failure.
+
+• RLS failure.
+
+• Business-rule failure.
+
+• Invalid state transition.
+
+• Validation failure.
+
+• Network failure.
+
+• RPC/server failure.
+
+• Empty result.
+
+Show concise Arabic user-facing messages.
+
+Keep technical diagnostics available for development without exposing stack traces to users.
+
+41. Security Verification
+
+Perform actual authorization tests.
+
+Verify that:
+
+• A normal customer cannot open Admin screens successfully.
+
+• A normal customer cannot call administrative RPCs successfully.
+
+• Unauthorized database access is rejected.
+
+• Administrative operations require the correct authenticated account.
+
+• Administrative data is not returned to customer queries.
+
+• Secrets are not present in the APK.
+
+• No service-role key is included in Android resources/build artifacts.
+
+Do not consider UI hiding a successful security test.
+
+42. Concurrency and Duplicate Operations
+
+Test scenarios such as:
+
+• Two approval attempts on the same request.
+
+• Approval while another operation changes the request.
+
+• Repeated task completion.
+
+• Completion after cancellation.
+
+• Repeated rejection.
+
+• Repeated settings update.
+
+The database must remain the final authority.
+
+Android must not attempt to solve concurrency solely through local state.
+
+43. Required Administrative Tests
+
+At minimum test:
+
+Authentication
+
+• Valid admin authentication.
+
+• Invalid authentication.
+
+• Unauthorized customer account.
+
+• Session restoration.
+
+• Logout.
+
+Protection Requests
+
+• Pending request visibility.
+
+• Correct details.
+
+• Approve.
+
+• Reject.
+
+• Duplicate approval.
+
+• Invalid state transition.
+
+• Rollback on failure.
+
+Customers
+
+• Customer list.
+
+• Customer details.
+
+• Customer isolation from unauthorized users.
+
+Providers
+
+• Create/update according to schema.
+
+• Prefix handling.
+
+• Disable/deactivate.
+
+• Historical-reference preservation.
+
+Plans
+
+• Create/update.
+
+• Provider association.
+
+• Enable/disable.
+
+• Historical snapshot preservation.
+
+Payment Methods
+
+• Create/update.
+
+• Enable/disable.
+
+• Customer visibility.
+
+• Historical-reference preservation.
+
+Payment Tasks
+
+• Upcoming.
+
+• Due Soon.
+
+• Due.
+
+• Overdue.
+
+• Complete.
+
+• Cancel.
+
+• Reschedule.
+
+• Prevent completion after cancellation.
+
+• Next-task creation.
+
+Settings
+
+• Task settings.
+
+• System settings.
+
+• Historical task preservation.
+
+Audit
+
+• Required administrative actions produce audit/state-transition records.
+
+44. End-to-End Administrative Scenario
+
+Run a real scenario using the actual backend:
+
+Admin login ↓ Open dashboard ↓ Open pending protection request ↓ Review customer ↓ Review phone number ↓ Review provider ↓ Review plan ↓ Review payment information ↓ Approve request ↓ Verify request becomes APPROVED ↓ Verify protection is created ↓ Verify required payment/protection records ↓ Verify first payment task ↓ Verify audit/state-transition records ↓ Verify customer notification ↓ Open customer protection ↓ Open generated payment task ↓ Complete/reschedule/cancel according to the task state ↓ Verify resulting backend state 
+
+The scenario must use real database operations.
+
+45. No Fake Administrative Data
+
+Remove or avoid:
+
+• Mock customer lists.
+
+• Fake request counts.
+
+• Fake payment tasks.
+
+• Hardcoded providers.
+
+• Hardcoded plans.
+
+• Hardcoded payment methods.
+
+• Fake audit records.
+
+• Fake notifications.
+
+• Fake admin identity.
+
+Empty database results must display as empty states.
+
+46. No Customer Regression
+
+After implementing Administration, verify that Stage 3 customer functionality still works.
+
+At minimum verify:
+
+• Customer login.
+
+• Customer navigation.
+
+• Numbers.
+
+• Protection requests.
+
+• Protections.
+
+• Notifications.
+
+• Logout.
+
+Do not allow Administration changes to break customer functionality.
+
+47. Build Verification
+
+Run:
+
+• Android compilation.
+
+• Debug build.
+
+• Unit tests.
+
+• Relevant integration tests.
+
+• Lint/static checks where configured.
+
+If build/test failures remain:
+
+Do NOT claim the stage is complete.
+
+Document every unresolved issue.
+
+48. Final Security Review
+
+Before commit, inspect the project for:
+
+• Hardcoded credentials.
+
+• Service-role keys.
+
+• Administrative secrets.
+
+• Debug bypasses.
+
+• Fake admin authentication.
+
+• Hardcoded admin IDs.
+
+• Unauthorized direct database access.
+
+• Client-side-only authorization.
+
+• Mock production data.
+
+Remove any such implementation before committing.
+
+49. Stage 4 Report
+
+Produce a detailed report containing:
+
+1. Summary
+
+What was implemented.
+
+2. Administration Authentication
+
+Authentication and authorization behavior.
+
+3. Dashboard
+
+Implemented metrics and data sources.
+
+4. Customers
+
+Customer management.
+
+5. Protection Requests
+
+Review, approval and rejection.
+
+6. Protections
+
+Administrative protection management.
+
+7. Telecom Providers
+
+Management and deactivation.
+
+8. Protection Plans
+
+Management and historical behavior.
+
+9. Payment Methods
+
+Management and visibility.
+
+10. Payment Tasks
+
+Task workflow and state handling.
+
+11. Task Settings
+
+Implemented settings.
+
+12. System Settings
+
+Implemented settings.
+
+13. Notifications
+
+Administrative notification functionality.
+
+14. Audit / History
+
+Implemented audit/state-transition visibility.
+
+15. Security
+
+Authorization and RLS verification.
+
+16. Tests
+
+Tests performed and results.
+
+17. Customer Regression
+
+Confirmation that Stage 3 remains functional.
+
+18. Build
+
+Build/test results.
+
+19. Known Issues
+
+Every unresolved issue.
+
+20. Files Changed
+
+Important files created/modified.
+
+21. Git
+
+Include:
+
+• Commit hash.
+
+• Branch.
+
+• Push result.
+
+50. Git Commit and Push
+
+After:
+
+IMPLEMENT → TEST → VERIFY
+
+create a dedicated Stage 4 commit.
+
+Suggested commit:
+
+feat(admin): implement administration 
+
+Push to:
+
+AMAN.XZ1
+
+Do NOT:
+
+• Create another repository.
+
+• Delete AMAN.XZ.txt.
+
+• Rewrite Git history.
+
+• Commit passwords.
+
+• Commit access tokens.
+
+• Commit service-role keys.
+
+• Commit local credentials.
+
+• Commit temporary debug bypasses.
+
+51. Mandatory Stop
+
+After successful commit and push:
+
+STOP.
+
+Do NOT start Stage 5.
+
+Do NOT perform full release/production QA beyond the verification necessary for Stage 4.
+
+Return the Stage 4 report.
+
+The final report must end with exactly one of:
+
+READY FOR STAGE 5
+
+Stage 4 is implemented and verified.
+
+READY WITH DOCUMENTED BLOCKERS
+
+Stage 4 is sufficiently complete to proceed, with clearly documented blockers.
+
+NOT READY FOR STAGE 5
+
+A significant unresolved issue prevents proceeding.
+
+52. Final Principle
+
+The Administration application is not merely a collection of hidden screens.
+
+It must be a real administrative client operating against:
+
+Supabase Auth + PostgreSQL + RLS + Secure RPC
+
+with:
+
+Backend authorization = source of truth
+
+and:
+
+Android UI = administrative client
+
+The administrator must never be able to perform an operation merely because the UI exposes a button.
+
+Every sensitive operation must be validated and authorized by the backend.
+
+Execute Stage 4 only.
+
+IMPLEMENT → TEST → VERIFY → REPORT → COMMIT → PUSH → STOP

@@ -1,0 +1,1105 @@
+AMAN.XZ1 — STAGE 1
+
+Foundation, Project Architecture & Secure Supabase Integration
+
+You are the primary implementation engineer for a new production Android application named:
+
+AMAN | أمان
+
+The GitHub repository for this project is:
+
+AMAN.XZ1
+
+The authoritative requirements document is:
+
+AMAN.XZ.txt
+
+This is a new clean project. Do not treat any previous AMAN repository, previous implementation, previous code, previous report, previous database, previous screenshots, or previous assumptions as implementation material.
+
+AMAN.XZ.txt is the authoritative product specification for this project.
+
+Your job in this stage is to establish a clean, production-ready technical foundation that the following four implementation stages can safely build upon.
+
+1. NON-NEGOTIABLE SOURCE OF TRUTH
+
+Before changing or creating project files:
+
+• Locate AMAN.XZ.txt in the repository/workspace.
+
+• Read and analyze the complete file, not only the first section or a search result.
+
+• Extract the requirements relevant to:
+
+• application architecture
+
+• customer application
+
+• administration application
+
+• authentication
+
+• users/customers
+
+• Supabase/PostgreSQL
+
+• security
+
+• authorization
+
+• database relationships
+
+• RLS
+
+• RPC/security functions
+
+• navigation
+
+• UI structure
+
+• business-data ownership
+
+• system settings
+
+• telecom providers
+
+• protection plans
+
+• payment methods
+
+• task settings
+
+• notifications
+
+• audit logs
+
+• Use the terminology and logical structure defined by AMAN.XZ.txt.
+
+• Do not replace requirements with your own interpretation.
+
+• Do not import requirements from any previous AMAN project.
+
+• Do not use previous AMAN code as a hidden template.
+
+• If a requirement is not specified in AMAN.XZ.txt, do not invent a business rule for it.
+
+• If a technical implementation detail is not specified, choose a reasonable implementation only when it does not change the documented business behavior.
+
+• Record any unresolved ambiguity instead of silently inventing a requirement.
+
+The reference document explicitly establishes, among other things, the following architecture and security principles that must guide this project:
+
+• Users/customers own their own customer numbers, protection requests, protections, and notifications.
+
+• A customer can own multiple phone numbers.
+
+• A phone number belongs to one customer.
+
+• A phone number must not be duplicated.
+
+• The telecom provider is determined automatically from the number prefix.
+
+• The customer must not manually choose the telecom provider for a number.
+
+• Protection plans belong to telecom providers.
+
+• A protection request belongs to the customer, number, telecom provider, plan, and payment method as defined by the specification.
+
+• A customer cannot directly create a protection.
+
+• Protection creation must occur through the approved business flow.
+
+• Overlapping active protections for the same number must be prevented.
+
+• Historical protection data must preserve the relevant values from the time the protection was created.
+
+• Changing plans must not modify historical protections.
+
+• Changing task settings must not modify previously created tasks.
+
+• "Needs renewal" is a calculated/display state, not an independently stored protection state.
+
+• A customer must not be able to access another customer's data.
+
+• Sensitive operations require secure backend/database logic and audit logging.
+
+• Required secure operations include provider identification, protection-request validation/creation, request acceptance, request rejection, protection creation, task completion, task rescheduling, task cancellation, next-task creation, displayed protection-state calculation, and sensitive-operation logging.
+
+• Administrative capabilities are protected operations and must not be implemented merely by hiding UI controls.
+
+• The logical database includes entities such as users, customer_numbers, telecom_providers, protection_plans, payment_methods, protection_requests, protections, payment_tasks, notifications, audit_logs, system_settings, and task_settings as defined by the reference.
+
+• System settings contain general application settings, while task settings belong to task_settings.
+
+Do not implement business logic that belongs to later stages merely to make the project appear complete.
+
+2. CLEAN REPOSITORY RULE
+
+The target repository is:
+
+AMAN.XZ1
+
+This is the only repository you are allowed to use for this project.
+
+Do not:
+
+• create another GitHub repository
+
+• fork an old AMAN repository
+
+• copy an old AMAN repository
+
+• migrate old AMAN source code
+
+• add references to old repositories
+
+• use another repository as the project's remote
+
+• create a second project beside AMAN.XZ1
+
+At the beginning:
+
+• Inspect the Git repository.
+
+• Confirm the current remote.
+
+• Confirm the current branch.
+
+• Confirm the initial contents.
+
+• Confirm that AMAN.XZ.txt exists.
+
+• Preserve AMAN.XZ.txt unchanged unless there is a technically necessary repository-format issue.
+
+• Do not delete the reference document.
+
+At the end of this stage, all Stage-1 work must be committed and pushed to:
+
+AMAN.XZ1
+
+3. STAGE 1 OBJECTIVE
+
+Build the technical foundation only.
+
+The result must be a real Android project, not a prototype, mockup, static UI demo, or fake backend.
+
+The foundation must establish:
+
+• Android project structure
+
+• Gradle configuration
+
+• application module
+
+• source structure
+
+• resource structure
+
+• navigation foundation
+
+• dependency structure
+
+• environment/configuration strategy
+
+• Supabase client foundation
+
+• authentication architecture foundation
+
+• repository/data layer foundation
+
+• ViewModel/state architecture foundation
+
+• error/result handling foundation
+
+• security boundaries
+
+• configuration safety
+
+• test foundation
+
+• Git hygiene
+
+Do not claim that the application is fully implemented at this stage.
+
+4. ANDROID PROJECT FOUNDATION
+
+Create a clean modern Android project appropriate for a production application.
+
+Use a maintainable architecture with clear separation between:
+
+UI → ViewModel/Presentation → Repository/Data → Supabase
+
+The architecture must make it possible for later stages to implement every documented AMAN operation without bypassing the data layer.
+
+Avoid putting business/database logic directly inside Composables/Activities/Fragments.
+
+Do not create a "God class".
+
+Do not place Supabase requests directly throughout UI screens.
+
+Use clear boundaries for:
+
+• presentation
+
+• navigation
+
+• domain/business models where appropriate
+
+• data models
+
+• repository interfaces/implementations
+
+• remote data access
+
+• authentication/session management
+
+• configuration
+
+• error handling
+
+• utilities
+
+• tests
+
+The exact package/module naming may be chosen by you if it does not contradict the reference specification.
+
+5. UI TECHNOLOGY
+
+Use a modern Android UI architecture suitable for the project.
+
+If using Jetpack Compose:
+
+• establish Compose correctly
+
+• establish Material/theme structure
+
+• establish Arabic/RTL support foundation
+
+• establish reusable UI components
+
+• establish screen/state patterns
+
+• establish navigation
+
+Do not build the complete customer or manager UI in this stage.
+
+Only create the foundation necessary for later stages.
+
+Do not fill screens with fake customer data.
+
+Do not create fake dashboard statistics.
+
+Do not create fake protection records.
+
+Do not create fake requests.
+
+Do not create fake tasks.
+
+Do not create fake notifications.
+
+6. APPLICATION IDENTITY
+
+The application identity must consistently represent:
+
+AMAN | أمان
+
+Do not invent a different product name.
+
+Use the repository/reference naming consistently where appropriate.
+
+Do not add unnecessary branding claims that are not present in the reference.
+
+7. NAVIGATION FOUNDATION
+
+Create the navigation architecture required for the future customer and administration areas.
+
+The navigation system must be designed so that later stages can add:
+
+Customer area
+
+• customer home
+
+• customer numbers
+
+• protection requests
+
+• protections
+
+• notifications
+
+• account/settings
+
+• terms and privacy where specified
+
+Administration area
+
+• customers
+
+• numbers
+
+• protection requests
+
+• protections
+
+• tasks
+
+• telecom providers
+
+• protection plans
+
+• payment methods
+
+• task settings
+
+• notifications
+
+• audit logs
+
+• system settings
+
+Do not implement all of these screens in Stage 1.
+
+Create only the navigation architecture and appropriate route/state boundaries.
+
+Authentication-aware navigation must be possible.
+
+Do not rely only on UI navigation to enforce authorization.
+
+8. SUPABASE ARCHITECTURE
+
+AMAN uses Supabase/PostgreSQL as the real backend/data platform.
+
+There is no requirement in this stage to create a separate custom backend server.
+
+Do not create:
+
+• Node.js backend
+
+• Express backend
+
+• Firebase backend
+
+• local server
+
+• fake REST API
+
+• mock server
+
+• local database pretending to be Supabase
+
+• hardcoded JSON backend
+
+The Android application must be architected to communicate with the real Supabase project.
+
+Create a dedicated Supabase configuration/client layer.
+
+The client architecture must support the future requirements for:
+
+• authentication
+
+• session handling
+
+• authenticated database access
+
+• database reads
+
+• database writes
+
+• RPC calls
+
+• errors
+
+• access tokens
+
+• refresh/session restoration
+
+• authorization headers as required by the selected Supabase SDK
+
+• secure logout
+
+Use the official/appropriate Supabase Android/Kotlin integration supported by the project technology.
+
+Do not implement a fake Supabase client.
+
+9. SUPABASE CREDENTIAL SECURITY
+
+Never commit secrets.
+
+Never place:
+
+• service-role key
+
+• database password
+
+• admin secret
+
+• private server credentials
+
+inside:
+
+• Kotlin source
+
+• XML
+
+• resources
+
+• Git
+
+• APK assets
+
+• hardcoded constants
+
+• committed local configuration
+
+The Android application may use only the public client configuration appropriate for a mobile application, such as the Supabase project URL and public/anon/publishable client key as applicable to the configured Supabase project.
+
+If credentials are not currently available in the new project environment:
+
+• Do not invent them.
+
+• Do not use credentials from an old project.
+
+• Do not create a new Supabase project.
+
+• Create the secure configuration mechanism.
+
+• Clearly mark actual Supabase connectivity as BLOCKED / NOT VERIFIED until real credentials are supplied.
+
+• Continue implementing everything that can safely be implemented without inventing credentials.
+
+If real credentials are available through the environment, configure them without committing secrets.
+
+10. ENVIRONMENT CONFIGURATION
+
+Create a safe configuration strategy suitable for local development and CI.
+
+The configuration should allow values such as:
+
+• Supabase URL
+
+• public/anon/publishable key
+
+to be supplied without committing secrets.
+
+Prefer an approach compatible with:
+
+• local development
+
+• ignored local configuration
+
+• Gradle/build configuration
+
+• CI environment variables/secrets
+
+Do not create fake values that look real.
+
+If placeholders are necessary, clearly label them as placeholders.
+
+Do not allow a placeholder value to be mistaken for a working production connection.
+
+11. AUTHENTICATION FOUNDATION
+
+The reference defines customer/account functionality and secure access.
+
+Establish a real authentication architecture that can later support the documented AMAN authentication flow.
+
+The authentication architecture must include:
+
+• sign-in state
+
+• signed-out state
+
+• signed-in state
+
+• session restoration
+
+• logout
+
+• authentication errors
+
+• expired/invalid session handling
+
+• loading state
+
+• secure token/session handling through Supabase Auth
+
+Do not implement:
+
+• fake users
+
+• fake login success
+
+• hardcoded credentials
+
+• fake access tokens
+
+• fake session IDs
+
+• timestamp-based fake users
+
+• local "login succeeded" flags pretending to be authenticated
+
+Do not treat a local StateFlow as proof of authentication.
+
+Authentication success must ultimately come from real Supabase Auth.
+
+Do not implement OTP unless the reference specifically requires it.
+
+Do not add phone-number login if the reference does not require it.
+
+Do not invent an authentication mechanism.
+
+12. SESSION MANAGEMENT
+
+Create a centralized session/authentication manager or equivalent architecture.
+
+It must be capable of:
+
+• observing/restoring the current Supabase session
+
+• exposing authentication state to the application
+
+• handling sign-in
+
+• handling sign-out
+
+• reacting to session expiration
+
+• preventing authenticated screens from assuming a valid session exists
+
+• exposing errors explicitly
+
+Avoid scattering authentication checks across individual UI components.
+
+Do not store fake authentication state as the source of truth.
+
+13. DATA LAYER FOUNDATION
+
+Create repository/data-layer abstractions that later stages can extend for:
+
+• users/customers
+
+• customer numbers
+
+• telecom providers
+
+• protection plans
+
+• payment methods
+
+• protection requests
+
+• protections
+
+• payment tasks
+
+• notifications
+
+• system settings
+
+• task settings
+
+• audit logs
+
+Do not fully implement all operations yet.
+
+The purpose of Stage 1 is to establish the boundaries.
+
+The architecture must make it difficult for future code to bypass the repository/data layer and directly manipulate Supabase from arbitrary UI components.
+
+14. ERROR HANDLING FOUNDATION
+
+Create a consistent error model.
+
+Errors should distinguish, where applicable, between:
+
+• authentication failure
+
+• authorization failure
+
+• network failure
+
+• Supabase/database error
+
+• RPC/business-rule error
+
+• validation error
+
+• session expiration
+
+• unexpected application error
+
+Do not silently swallow errors.
+
+Do not show "success" when a database operation actually failed.
+
+Do not convert backend failure into a fake successful UI state.
+
+Later stages must be able to display meaningful customer/manager messages while retaining technical error information for diagnostics.
+
+15. STATE MANAGEMENT FOUNDATION
+
+Establish a predictable state model for asynchronous operations.
+
+At minimum, support patterns equivalent to:
+
+• idle
+
+• loading
+
+• success/data
+
+• empty
+
+• error
+
+where appropriate.
+
+Do not use mutable local collections as a substitute for the database.
+
+Do not create fake persistence using only:
+
+• MutableState
+
+• StateFlow
+
+• SharedFlow
+
+• singleton objects
+
+• static lists
+
+• in-memory repositories
+
+Local state may represent UI state, but it must never be presented as persistent AMAN business data.
+
+16. DATABASE ARCHITECTURE BOUNDARIES
+
+Do not fully build the Stage-2 database yet unless a small database artifact is strictly required for Stage-1 connectivity verification.
+
+Stage 2 will implement the complete PostgreSQL schema, relationships, constraints, RLS policies, and RPC/business functions.
+
+However, Stage 1 architecture must already respect the documented logical relationships:
+users ├── customer_numbers ├── protection_requests ├── protections └── notifications telecom_providers ├── customer_numbers ├── protection_plans └── task_settings customer_numbers ├── protection_requests ├── protections └── payment_tasks protection_plans └── protection_requests / protections payment_methods └── protection_requests protection_requests └── protections protections └── payment_tasks 
+Do not invent alternate ownership relationships.
+
+Do not create a second conflicting data model.
+
+17. SECURITY ARCHITECTURE
+
+Security must be designed into the foundation.
+
+The application must assume that the client is untrusted.
+
+Do not rely on:
+
+• hidden buttons
+
+• hidden screens
+
+• disabled UI elements
+
+• client-side role checks alone
+
+• local flags
+
+• hardcoded admin IDs
+
+• hardcoded customer IDs
+
+for authorization.
+
+The actual authorization boundary will be implemented through Supabase/PostgreSQL/RLS/RPC in later stages.
+
+The Stage-1 architecture must make that possible.
+
+18. BUSINESS DATA MUST NOT BE HARDCODED
+
+Do not hardcode business-managed data in the Android application.
+
+In particular, do not invent or hardcode:
+
+• telecom providers
+
+• provider prefixes
+
+• protection plans
+
+• plan prices
+
+• payment methods
+
+• payment account details
+
+• task amounts
+
+• task intervals
+
+• task settings
+
+• system contact information
+
+• terms
+
+• privacy content
+
+when these are defined as database/system-managed data in the reference.
+
+These values will be provided by Supabase/database/admin functionality in later stages.
+
+19. TEST FOUNDATION
+
+Create a test structure appropriate for the architecture.
+
+At this stage, test the foundation that can actually be tested.
+
+Examples:
+
+• basic configuration behavior
+
+• navigation route construction
+
+• authentication state modeling
+
+• session-state transitions
+
+• repository/error mapping
+
+• ViewModel state transitions where applicable
+
+• configuration validation
+
+• absence of hardcoded secrets where practical
+
+Do not create fake tests whose only purpose is to make the project appear tested.
+
+Do not claim integration tests against Supabase unless a real Supabase environment was actually used.
+
+20. BUILD VERIFICATION
+
+After implementation:
+
+• Inspect available Android/Java/Gradle tooling.
+
+• Run the appropriate Gradle build/test commands.
+
+• Use the project's actual configured Gradle wrapper when available.
+
+• Do not assume the environment can build.
+
+• If the environment cannot build, explicitly document the exact blocker.
+
+• Do not state "build successful" unless the command actually completed successfully.
+
+• Do not state "tests passed" unless the tests actually ran and passed.
+
+Use exact evidence in the report.
+
+21. CODE QUALITY AUDIT
+
+Before committing:
+
+Inspect the resulting project for:
+
+• duplicated architecture
+
+• dead files
+
+• placeholder production logic
+
+• fake repositories
+
+• fake authentication
+
+• hardcoded business data
+
+• secrets
+
+• insecure credentials
+
+• direct UI-to-Supabase calls
+
+• unnecessary dependencies
+
+• broken imports
+
+• unused files
+
+• inconsistent package names
+
+• conflicting navigation
+
+• incorrect configuration
+
+• accidental references to old AMAN projects
+
+Remove unnecessary artifacts created during experimentation.
+
+Do not rewrite working code merely for stylistic reasons.
+
+22. GIT COMMIT AND PUSH — MANDATORY
+
+At the end of Stage 1:
+
+Run:
+git status 
+Review every changed file.
+
+Do not commit:
+
+• secrets
+
+• local credentials
+
+• generated private files
+
+• machine-specific credentials
+
+• unrelated files
+
+• temporary debug artifacts
+
+Then create a clear commit for this stage.
+
+Suggested commit message:
+feat: establish AMAN foundation and secure Supabase architecture 
+Push the commit to the configured remote repository:
+AMAN.XZ1 
+Verify that the push actually succeeds.
+
+Then verify the final Git state.
+
+The report must contain:
+
+• branch name
+
+• commit hash
+
+• push result
+
+• remote repository
+
+• final git status
+
+Do not claim the repository was updated unless the push command actually succeeded.
+
+23. MANDATORY STAGE REPORT
+
+After implementation, testing, verification, and Git push, produce a detailed report.
+
+The report must be divided into these exact sections:
+
+A. Stage
+
+State:
+
+STAGE 1 — FOUNDATION, ARCHITECTURE & SECURE SUPABASE INTEGRATION
+
+B. Source of Truth
+
+Confirm that AMAN.XZ.txt was located and analyzed.
+
+State its actual location.
+
+State whether it was modified.
+
+C. Implemented
+
+List every major implemented component.
+
+For each component include:
+
+• file/path
+
+• purpose
+
+• implementation status
+
+D. Architecture
+
+Show the final architecture and explain the flow:
+UI ↓ ViewModel / Presentation ↓ Repository / Data Layer ↓ Supabase Client ↓ Supabase Auth / PostgreSQL / RPC ↓ Result / Error ↓ ViewModel State ↓ UI 
+Explain any deviation.
+
+E. Supabase
+
+Report:
+
+• Supabase client implementation
+
+• configuration mechanism
+
+• authentication foundation
+
+• session management
+
+• connectivity status
+
+Clearly state:
+
+VERIFIED
+
+or
+
+NOT VERIFIED
+
+and explain why.
+
+F. Security
+
+Report:
+
+• secrets handling
+
+• configuration security
+
+• authentication boundary
+
+• authorization architecture
+
+• fake-data prevention
+
+• hardcoded business-data audit
+
+G. Tests
+
+For every test/build command:
+
+• exact command
+
+• result
+
+• relevant output
+
+• status
+
+Use only:
+
+• PASSED
+
+• FAILED
+
+• NOT RUN
+
+• BLOCKED
+
+Do not use vague statements such as "looks good".
+
+H. Requirements Coverage
+
+Create a table:
+
+Requirement
+
+Status
+
+Evidence
+
+Notes
+
+Use:
+
+• IMPLEMENTED
+
+• PARTIALLY IMPLEMENTED
+
+• NOT IMPLEMENTED
+
+• BLOCKED
+
+• NOT APPLICABLE
+
+Do not claim complete implementation for functionality intentionally deferred to later stages.
+
+I. Files Changed
+
+List all created/modified/deleted files.
+
+J. Git
+
+Report:
+
+• repository
+
+• branch
+
+• commit hash
+
+• commit message
+
+• push result
+
+• final git status
+
+K. Problems / Blockers
+
+List every unresolved problem.
+
+Do not hide blockers.
+
+Do not convert blockers into successful status.
+
+L. Stage Verdict
+
+The verdict must be factual, not promotional.
+
+Use one of:
+
+• READY FOR STAGE 2
+
+• READY WITH DOCUMENTED BLOCKERS
+
+• NOT READY FOR STAGE 2
+
+Do not proceed to Stage 2 automatically.
+
+24. STOP CONDITION
+
+This is extremely important.
+
+After completing Stage 1 and producing the report:
+
+STOP.
+
+Do not:
+
+• begin Stage 2
+
+• implement the complete database
+
+• implement the complete customer application
+
+• implement the complete administration application
+
+• invent missing requirements
+
+• continue with additional features
+
+• create another repository
+
+Wait for explicit authorization to begin Stage 2.
+
+25. FINAL ENGINEERING PRINCIPLE
+
+This project is being rebuilt as a real production application.
+
+Therefore:
+
+Do not optimize for the appearance of progress. Optimize for verified correctness.
+
+A smaller implementation with evidence is preferable to a large implementation based on assumptions.
+
+Every future AMAN feature must ultimately be traceable through:
+UI element → UI state → ViewModel → Repository → Supabase client → RPC / PostgreSQL → constraints / RLS / authorization → database result → repository result → ViewModel state → UI result 
+No fake success.
+
+No mock business persistence.
+
+No client-side security masquerading as backend authorization.
+
+No invented business values.
+
+No silent assumptions.
+
+No claims without evidence.
+
+Complete Stage 1, verify it, commit it, push it to AMAN.XZ1, report it, and stop.
