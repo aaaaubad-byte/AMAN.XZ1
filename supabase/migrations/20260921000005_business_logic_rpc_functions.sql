@@ -1,353 +1,10 @@
--- ==============================================================================
--- AMAN (أمان) — Complete PostgreSQL Schema & Business Logic
--- Authoritative Specification: AMAN.XZ.txt (Lines 1062 - 1792)
--- Stage 2: Database, Security, RLS, Constraints & Core Business Logic
--- Target Repository: AMAN.XZ1
--- ==============================================================================
+-- AMAN.XZ1 - Migration 05: Transaction-Safe Business Logic RPC Functions
+-- Authoritative Specification: AMAN.XZ.txt (Lines 1399-1412, 1433-1452, 1505-1675, 1710-1728)
 
--- 1. Required Extensions
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-CREATE EXTENSION IF NOT EXISTS "pgcrypto";
-
--- 2. Domain ENUMs
-DO $$ BEGIN
-    CREATE TYPE app_user_role AS ENUM ('client', 'manager', 'admin');
-EXCEPTION
-    WHEN duplicate_object THEN null;
-END $$;
-
-DO $$ BEGIN
-    CREATE TYPE request_status AS ENUM ('pending', 'approved', 'rejected');
-EXCEPTION
-    WHEN duplicate_object THEN null;
-END $$;
-
-DO $$ BEGIN
-    CREATE TYPE stored_protection_status AS ENUM ('active', 'expired');
-EXCEPTION
-    WHEN duplicate_object THEN null;
-END $$;
-
-DO $$ BEGIN
-    CREATE TYPE task_type AS ENUM ('first', 'recurring');
-EXCEPTION
-    WHEN duplicate_object THEN null;
-END $$;
-
-DO $$ BEGIN
-    CREATE TYPE task_status AS ENUM ('upcoming', 'due', 'overdue', 'completed', 'cancelled');
-EXCEPTION
-    WHEN duplicate_object THEN null;
-END $$;
-
-DO $$ BEGIN
-    CREATE TYPE number_status AS ENUM ('active', 'suspended', 'inactive');
-EXCEPTION
-    WHEN duplicate_object THEN null;
-END $$;
-
-DO $$ BEGIN
-    CREATE TYPE notification_type AS ENUM (
-        'request_approved',
-        'request_rejected',
-        'protection_expiring',
-        'general'
-    );
-EXCEPTION
-    WHEN duplicate_object THEN null;
-END $$;
-
--- ------------------------------------------------------------------------------
--- 3. Core Tables
--- ------------------------------------------------------------------------------
-
--- Users (المستخدمون / العملاء)
-CREATE TABLE IF NOT EXISTS users (
-    id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-    name TEXT NOT NULL,
-    email TEXT NOT NULL UNIQUE,
-    role app_user_role NOT NULL DEFAULT 'client',
-    account_status TEXT NOT NULL DEFAULT 'active',
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
--- Telecom Providers (شركات الاتصالات)
-CREATE TABLE IF NOT EXISTS telecom_providers (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    name TEXT NOT NULL,
-    code TEXT NOT NULL UNIQUE,
-    number_length INT NOT NULL DEFAULT 9 CHECK (number_length > 0),
-    is_active BOOLEAN NOT NULL DEFAULT TRUE,
-    is_visible_to_customer BOOLEAN NOT NULL DEFAULT TRUE,
-    display_order INT NOT NULL DEFAULT 0,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
--- Telecom Prefixes (بادئات أرقام شركات الاتصالات)
-CREATE TABLE IF NOT EXISTS telecom_prefixes (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    provider_id UUID NOT NULL REFERENCES telecom_providers(id) ON DELETE CASCADE,
-    prefix TEXT NOT NULL,
-    is_active BOOLEAN NOT NULL DEFAULT TRUE,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    CONSTRAINT uq_telecom_prefix UNIQUE(prefix)
-);
-
--- Customer Numbers (أرقام العملاء)
-CREATE TABLE IF NOT EXISTS customer_numbers (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    customer_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    provider_id UUID NOT NULL REFERENCES telecom_providers(id) ON DELETE RESTRICT,
-    phone_number TEXT NOT NULL UNIQUE,
-    status number_status NOT NULL DEFAULT 'active',
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
--- Protection Plans (باقات الحماية)
-CREATE TABLE IF NOT EXISTS protection_plans (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    provider_id UUID NOT NULL REFERENCES telecom_providers(id) ON DELETE CASCADE,
-    name TEXT NOT NULL,
-    price NUMERIC(12, 2) NOT NULL CHECK (price >= 0),
-    duration_days INT NOT NULL CHECK (duration_days > 0),
-    is_active BOOLEAN NOT NULL DEFAULT TRUE,
-    is_visible_to_customer BOOLEAN NOT NULL DEFAULT TRUE,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
--- Payment Methods (طرق الدفع / المحافظ الإلكترونية)
-CREATE TABLE IF NOT EXISTS payment_methods (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    name TEXT NOT NULL,
-    account_number TEXT NOT NULL,
-    account_holder_name TEXT NOT NULL,
-    instructions TEXT,
-    is_active BOOLEAN NOT NULL DEFAULT TRUE,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
--- Protection Requests (طلبات الحماية)
-CREATE TABLE IF NOT EXISTS protection_requests (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    customer_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    customer_number_id UUID NOT NULL REFERENCES customer_numbers(id) ON DELETE CASCADE,
-    provider_id UUID NOT NULL REFERENCES telecom_providers(id) ON DELETE RESTRICT,
-    plan_id UUID NOT NULL REFERENCES protection_plans(id) ON DELETE RESTRICT,
-    payment_method_id UUID NOT NULL REFERENCES payment_methods(id) ON DELETE RESTRICT,
-    protection_value NUMERIC(12, 2) NOT NULL CHECK (protection_value >= 0),
-    transfer_reference TEXT,
-    transfer_proof_url TEXT,
-    status request_status NOT NULL DEFAULT 'pending',
-    rejection_reason TEXT,
-    reviewing_manager_id UUID REFERENCES users(id) ON DELETE SET NULL,
-    reviewed_at TIMESTAMPTZ,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
--- Protections (الحمايات)
-CREATE TABLE IF NOT EXISTS protections (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    customer_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    customer_number_id UUID NOT NULL REFERENCES customer_numbers(id) ON DELETE CASCADE,
-    provider_id UUID NOT NULL REFERENCES telecom_providers(id) ON DELETE RESTRICT,
-    plan_id UUID NOT NULL REFERENCES protection_plans(id) ON DELETE RESTRICT,
-    created_from_request_id UUID NOT NULL UNIQUE REFERENCES protection_requests(id) ON DELETE RESTRICT,
-    protection_value_at_purchase NUMERIC(12, 2) NOT NULL CHECK (protection_value_at_purchase >= 0),
-    duration_days_at_purchase INT NOT NULL CHECK (duration_days_at_purchase > 0),
-    start_date TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    end_date TIMESTAMPTZ NOT NULL,
-    status stored_protection_status NOT NULL DEFAULT 'active',
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    CONSTRAINT chk_protection_dates CHECK (end_date > start_date)
-);
-
--- Task Settings (إعدادات المهام التشغيلية لكل شركة اتصالات)
-CREATE TABLE IF NOT EXISTS task_settings (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    provider_id UUID NOT NULL UNIQUE REFERENCES telecom_providers(id) ON DELETE CASCADE,
-    first_task_enabled BOOLEAN NOT NULL DEFAULT TRUE,
-    first_task_amount NUMERIC(12, 2) NOT NULL DEFAULT 0.0 CHECK (first_task_amount >= 0),
-    recurring_task_enabled BOOLEAN NOT NULL DEFAULT TRUE,
-    recurring_task_amount NUMERIC(12, 2) NOT NULL DEFAULT 0.0 CHECK (recurring_task_amount >= 0),
-    repeat_interval_days INT NOT NULL DEFAULT 30 CHECK (repeat_interval_days > 0),
-    visibility_days_before_due INT NOT NULL DEFAULT 3 CHECK (visibility_days_before_due >= 0),
-    manual_reschedule_enabled BOOLEAN NOT NULL DEFAULT TRUE,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
--- Payment Tasks (مهام السداد)
-CREATE TABLE IF NOT EXISTS payment_tasks (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    protection_id UUID NOT NULL REFERENCES protections(id) ON DELETE CASCADE,
-    customer_number_id UUID NOT NULL REFERENCES customer_numbers(id) ON DELETE CASCADE,
-    task_type task_type NOT NULL,
-    amount NUMERIC(12, 2) NOT NULL CHECK (amount >= 0),
-    due_date TIMESTAMPTZ NOT NULL,
-    status task_status NOT NULL DEFAULT 'upcoming',
-    completion_date TIMESTAMPTZ,
-    completed_by_manager_id UUID REFERENCES users(id) ON DELETE SET NULL,
-    previous_due_date TIMESTAMPTZ,
-    reschedule_reason TEXT,
-    rescheduled_by_manager_id UUID REFERENCES users(id) ON DELETE SET NULL,
-    cancellation_reason TEXT,
-    cancelled_by_manager_id UUID REFERENCES users(id) ON DELETE SET NULL,
-    cancelled_at TIMESTAMPTZ,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
--- Notifications (الإشعارات)
-CREATE TABLE IF NOT EXISTS notifications (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    customer_id UUID REFERENCES users(id) ON DELETE CASCADE,
-    title TEXT NOT NULL,
-    message TEXT NOT NULL,
-    notification_type notification_type NOT NULL DEFAULT 'general',
-    is_read BOOLEAN NOT NULL DEFAULT FALSE,
-    read_at TIMESTAMPTZ,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
--- Audit Logs (سجل العمليات الحساسة)
-CREATE TABLE IF NOT EXISTS audit_logs (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    actor_id UUID REFERENCES users(id) ON DELETE SET NULL,
-    operation_type TEXT NOT NULL,
-    affected_record_id UUID,
-    affected_table TEXT NOT NULL,
-    operation_details TEXT,
-    previous_data JSONB,
-    new_data JSONB,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
--- System Settings (إعدادات النظام العامة)
-CREATE TABLE IF NOT EXISTS system_settings (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    app_name TEXT NOT NULL DEFAULT 'AMAN | أمان',
-    contact_email TEXT,
-    contact_phone TEXT,
-    terms_and_conditions TEXT,
-    privacy_policy TEXT,
-    renewal_warning_days INT NOT NULL DEFAULT 7 CHECK (renewal_warning_days > 0),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
--- ------------------------------------------------------------------------------
--- 4. Constraints & Unique Indexes
--- ------------------------------------------------------------------------------
-CREATE UNIQUE INDEX IF NOT EXISTS uq_pending_request_per_number 
-ON protection_requests(customer_number_id) 
-WHERE status = 'pending';
-
-CREATE UNIQUE INDEX IF NOT EXISTS uq_active_protection_per_number 
-ON protections(customer_number_id) 
-WHERE status = 'active';
-
-CREATE UNIQUE INDEX IF NOT EXISTS uq_active_telecom_prefix 
-ON telecom_prefixes(prefix) 
-WHERE is_active = TRUE;
-
-CREATE INDEX IF NOT EXISTS idx_customer_numbers_customer_id ON customer_numbers(customer_id);
-CREATE INDEX IF NOT EXISTS idx_customer_numbers_provider_id ON customer_numbers(provider_id);
-CREATE INDEX IF NOT EXISTS idx_customer_numbers_phone ON customer_numbers(phone_number);
-CREATE INDEX IF NOT EXISTS idx_telecom_prefixes_provider ON telecom_prefixes(provider_id);
-CREATE INDEX IF NOT EXISTS idx_protection_plans_provider ON protection_plans(provider_id) WHERE is_active = TRUE;
-CREATE INDEX IF NOT EXISTS idx_protection_requests_customer_id ON protection_requests(customer_id);
-CREATE INDEX IF NOT EXISTS idx_protection_requests_status ON protection_requests(status);
-CREATE INDEX IF NOT EXISTS idx_protection_requests_number ON protection_requests(customer_number_id);
-CREATE INDEX IF NOT EXISTS idx_protections_customer_id ON protections(customer_id);
-CREATE INDEX IF NOT EXISTS idx_protections_number_id ON protections(customer_number_id);
-CREATE INDEX IF NOT EXISTS idx_protections_status_end_date ON protections(status, end_date);
-CREATE INDEX IF NOT EXISTS idx_payment_tasks_protection ON payment_tasks(protection_id);
-CREATE INDEX IF NOT EXISTS idx_payment_tasks_number ON payment_tasks(customer_number_id);
-CREATE INDEX IF NOT EXISTS idx_payment_tasks_status_due ON payment_tasks(status, due_date);
-CREATE INDEX IF NOT EXISTS idx_notifications_customer ON notifications(customer_id, is_read, created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_audit_logs_actor ON audit_logs(actor_id, created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_audit_logs_record ON audit_logs(affected_table, affected_record_id);
-
--- ------------------------------------------------------------------------------
--- 5. Row Level Security & Access Policies
--- ------------------------------------------------------------------------------
-CREATE OR REPLACE FUNCTION is_manager(p_user_id UUID DEFAULT auth.uid())
-RETURNS BOOLEAN
-LANGUAGE sql
-STABLE
-SECURITY DEFINER
-SET search_path = public
-AS $$
-    SELECT EXISTS (
-        SELECT 1 FROM users 
-        WHERE id = p_user_id 
-          AND role IN ('manager', 'admin')
-          AND account_status = 'active'
-    );
-$$;
-
-ALTER TABLE users ENABLE ROW LEVEL SECURITY;
-ALTER TABLE telecom_providers ENABLE ROW LEVEL SECURITY;
-ALTER TABLE telecom_prefixes ENABLE ROW LEVEL SECURITY;
-ALTER TABLE customer_numbers ENABLE ROW LEVEL SECURITY;
-ALTER TABLE protection_plans ENABLE ROW LEVEL SECURITY;
-ALTER TABLE payment_methods ENABLE ROW LEVEL SECURITY;
-ALTER TABLE protection_requests ENABLE ROW LEVEL SECURITY;
-ALTER TABLE protections ENABLE ROW LEVEL SECURITY;
-ALTER TABLE task_settings ENABLE ROW LEVEL SECURITY;
-ALTER TABLE payment_tasks ENABLE ROW LEVEL SECURITY;
-ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
-ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
-ALTER TABLE system_settings ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Users can view own profile" ON users FOR SELECT TO authenticated USING (id = auth.uid() OR is_manager());
-CREATE POLICY "Users can update own profile" ON users FOR UPDATE TO authenticated USING (id = auth.uid() OR is_manager()) WITH CHECK ((id = auth.uid() AND role = (SELECT role FROM users WHERE id = auth.uid())) OR is_manager());
-CREATE POLICY "Allow user registration" ON users FOR INSERT TO authenticated WITH CHECK (id = auth.uid() OR is_manager());
-
-CREATE POLICY "Allow customers to view active providers" ON telecom_providers FOR SELECT TO authenticated USING ((is_active = TRUE AND is_visible_to_customer = TRUE) OR is_manager());
-CREATE POLICY "Managers can manage providers" ON telecom_providers FOR ALL TO authenticated USING (is_manager()) WITH CHECK (is_manager());
-
-CREATE POLICY "Allow view telecom prefixes" ON telecom_prefixes FOR SELECT TO authenticated USING (is_active = TRUE OR is_manager());
-CREATE POLICY "Managers can manage prefixes" ON telecom_prefixes FOR ALL TO authenticated USING (is_manager()) WITH CHECK (is_manager());
-
-CREATE POLICY "Customers can view own numbers" ON customer_numbers FOR SELECT TO authenticated USING (customer_id = auth.uid() OR is_manager());
-CREATE POLICY "Managers can manage numbers" ON customer_numbers FOR ALL TO authenticated USING (is_manager()) WITH CHECK (is_manager());
-
-CREATE POLICY "Customers can view active plans" ON protection_plans FOR SELECT TO authenticated USING ((is_active = TRUE AND is_visible_to_customer = TRUE) OR is_manager());
-CREATE POLICY "Managers can manage plans" ON protection_plans FOR ALL TO authenticated USING (is_manager()) WITH CHECK (is_manager());
-
-CREATE POLICY "Customers can view active payment methods" ON payment_methods FOR SELECT TO authenticated USING (is_active = TRUE OR is_manager());
-CREATE POLICY "Managers can manage payment methods" ON payment_methods FOR ALL TO authenticated USING (is_manager()) WITH CHECK (is_manager());
-
-CREATE POLICY "Customers can view own requests" ON protection_requests FOR SELECT TO authenticated USING (customer_id = auth.uid() OR is_manager());
-CREATE POLICY "Managers can manage requests" ON protection_requests FOR UPDATE TO authenticated USING (is_manager()) WITH CHECK (is_manager());
-
-CREATE POLICY "Customers can view own protections" ON protections FOR SELECT TO authenticated USING (customer_id = auth.uid() OR is_manager());
-CREATE POLICY "Managers can manage protections" ON protections FOR ALL TO authenticated USING (is_manager()) WITH CHECK (is_manager());
-
-CREATE POLICY "Task settings accessible only to managers" ON task_settings FOR ALL TO authenticated USING (is_manager()) WITH CHECK (is_manager());
-CREATE POLICY "Payment tasks accessible only to managers" ON payment_tasks FOR ALL TO authenticated USING (is_manager()) WITH CHECK (is_manager());
-
-CREATE POLICY "Customers can view own notifications" ON notifications FOR SELECT TO authenticated USING (customer_id = auth.uid() OR is_manager());
-CREATE POLICY "Customers can mark own notifications as read" ON notifications FOR UPDATE TO authenticated USING (customer_id = auth.uid()) WITH CHECK (customer_id = auth.uid());
-CREATE POLICY "Managers can manage notifications" ON notifications FOR ALL TO authenticated USING (is_manager()) WITH CHECK (is_manager());
-
-CREATE POLICY "Audit logs visible only to managers" ON audit_logs FOR SELECT TO authenticated USING (is_manager());
-
-CREATE POLICY "System settings readable by authenticated users" ON system_settings FOR SELECT TO authenticated USING (TRUE);
-CREATE POLICY "System settings editable only by managers" ON system_settings FOR ALL TO authenticated USING (is_manager()) WITH CHECK (is_manager());
-
--- ------------------------------------------------------------------------------
--- 6. Business Logic RPC Functions
--- ------------------------------------------------------------------------------
-
--- Phone Normalizer
+-- ============================================================================
+-- 1. Helper: Normalize Phone Number and Extract National Number
+-- Strips country code (+967, 00967), whitespace, and leading zero.
+-- ============================================================================
 CREATE OR REPLACE FUNCTION normalize_phone_number(p_raw_phone TEXT)
 RETURNS TEXT
 LANGUAGE plpgsql
@@ -357,6 +14,8 @@ DECLARE
     v_clean TEXT;
 BEGIN
     v_clean := regexp_replace(coalesce(p_raw_phone, ''), '\s+', '', 'g');
+    
+    -- Strip country prefix
     IF v_clean LIKE '+967%' THEN
         v_clean := substring(v_clean FROM 5);
     ELSIF v_clean LIKE '00967%' THEN
@@ -364,14 +23,20 @@ BEGIN
     ELSIF v_clean LIKE '967%' AND length(v_clean) > 9 THEN
         v_clean := substring(v_clean FROM 4);
     END IF;
+
+    -- Strip leading zero if present
     IF v_clean LIKE '0%' AND length(v_clean) > 9 THEN
         v_clean := substring(v_clean FROM 2);
     END IF;
+
     RETURN v_clean;
 END;
 $$;
 
--- Identify Provider from Prefix
+-- ============================================================================
+-- 2. Function: Identify Telecom Provider from Prefix (التعرف على شركة الاتصالات)
+-- Rule: Deterministic lookup in telecom_prefixes. Rejects unknown/inactive prefixes.
+-- ============================================================================
 CREATE OR REPLACE FUNCTION identify_provider_from_prefix(p_phone_number TEXT)
 RETURNS UUID
 LANGUAGE plpgsql
@@ -384,6 +49,8 @@ DECLARE
     v_provider_id UUID;
 BEGIN
     v_normalized := normalize_phone_number(p_phone_number);
+
+    -- Find matching active prefix ordered by length descending (most specific match)
     SELECT tp.provider_id INTO v_provider_id
     FROM telecom_prefixes tp
     JOIN telecom_providers prov ON prov.id = tp.provider_id
@@ -402,7 +69,10 @@ BEGIN
 END;
 $$;
 
--- Register Customer Number
+-- ============================================================================
+-- 3. Function: Register Customer Number (إضافة رقم جديد للعميل)
+-- Rule: The customer NEVER chooses the provider manually!
+-- ============================================================================
 CREATE OR REPLACE FUNCTION register_customer_number(p_phone_number TEXT)
 RETURNS UUID
 LANGUAGE plpgsql
@@ -426,12 +96,15 @@ BEGIN
         RAISE EXCEPTION 'رقم الهاتف غير صالح' USING ERRCODE = '22000';
     END IF;
 
+    -- Check if phone already registered
     IF EXISTS (SELECT 1 FROM customer_numbers WHERE phone_number = v_normalized) THEN
         RAISE EXCEPTION 'رقم الهاتف مسجل مسبقاً في النظام' USING ERRCODE = '23505';
     END IF;
 
+    -- Auto-identify provider
     v_provider_id := identify_provider_from_prefix(v_normalized);
 
+    -- Validate number length
     SELECT number_length INTO v_expected_len
     FROM telecom_providers
     WHERE id = v_provider_id;
@@ -441,6 +114,7 @@ BEGIN
             USING ERRCODE = '22000';
     END IF;
 
+    -- Insert record
     INSERT INTO customer_numbers (
         customer_id,
         provider_id,
@@ -457,7 +131,11 @@ BEGIN
 END;
 $$;
 
--- Submit Protection Request
+-- ============================================================================
+-- 4. Function: Submit Protection Request (إنشاء طلب حماية والتحقق منه)
+-- Validates: ownership, no duplicate pending request, no overlapping active protection,
+-- provider consistency between number and plan, active payment method.
+-- ============================================================================
 CREATE OR REPLACE FUNCTION submit_protection_request(
     p_customer_number_id UUID,
     p_plan_id UUID,
@@ -482,7 +160,11 @@ BEGIN
         RAISE EXCEPTION 'غير مصرح: يجب تسجيل الدخول' USING ERRCODE = '42501';
     END IF;
 
-    SELECT * INTO v_number FROM customer_numbers WHERE id = p_customer_number_id;
+    -- 1. Validate customer number ownership & status
+    SELECT * INTO v_number
+    FROM customer_numbers
+    WHERE id = p_customer_number_id;
+
     IF v_number IS NULL THEN
         RAISE EXCEPTION 'الرقم غير موجود' USING ERRCODE = 'P0002';
     END IF;
@@ -495,6 +177,7 @@ BEGIN
         RAISE EXCEPTION 'لا يمكن طلب حماية لرقم غير نشط' USING ERRCODE = 'P0003';
     END IF;
 
+    -- 2. Check for existing pending request
     IF EXISTS (
         SELECT 1 FROM protection_requests 
         WHERE customer_number_id = p_customer_number_id 
@@ -503,6 +186,7 @@ BEGIN
         RAISE EXCEPTION 'يوجد طلب حماية قيد المراجعة بالفعل لهذا الرقم' USING ERRCODE = '23505';
     END IF;
 
+    -- 3. Check for existing active protection
     IF EXISTS (
         SELECT 1 FROM protections 
         WHERE customer_number_id = p_customer_number_id 
@@ -511,7 +195,11 @@ BEGIN
         RAISE EXCEPTION 'الرقم يتمتع بحماية نشطة حالياً ولا يحتاج إلى طلب جديد' USING ERRCODE = '23505';
     END IF;
 
-    SELECT * INTO v_plan FROM protection_plans WHERE id = p_plan_id;
+    -- 4. Validate protection plan and provider consistency
+    SELECT * INTO v_plan
+    FROM protection_plans
+    WHERE id = p_plan_id;
+
     IF v_plan IS NULL OR NOT v_plan.is_active THEN
         RAISE EXCEPTION 'باقة الحماية المختارة غير متاحة حالياً' USING ERRCODE = 'P0002';
     END IF;
@@ -520,11 +208,16 @@ BEGIN
         RAISE EXCEPTION 'الباقة المختارة لا تتطابق مع شركة اتصالات الرقم' USING ERRCODE = 'P0004';
     END IF;
 
-    SELECT * INTO v_payment FROM payment_methods WHERE id = p_payment_method_id;
+    -- 5. Validate payment method
+    SELECT * INTO v_payment
+    FROM payment_methods
+    WHERE id = p_payment_method_id;
+
     IF v_payment IS NULL OR NOT v_payment.is_active THEN
         RAISE EXCEPTION 'طريقة الدفع المختارة غير مفعلة' USING ERRCODE = 'P0002';
     END IF;
 
+    -- 6. Insert request with plan price snapshot
     INSERT INTO protection_requests (
         customer_id,
         customer_number_id,
@@ -551,7 +244,16 @@ BEGIN
 END;
 $$;
 
--- Approve Protection Request
+-- ============================================================================
+-- 5. Function: Approve Protection Request (قبول طلب الحماية وتفعيلها ذرياً)
+-- Atomic Operation:
+-- - Row lock request
+-- - Status transition PENDING -> APPROVED
+-- - Create protection with historical price and duration snapshot
+-- - Evaluate task_settings; create first task if enabled
+-- - Create customer notification
+-- - Write immutable audit log
+-- ============================================================================
 CREATE OR REPLACE FUNCTION approve_protection_request(p_request_id UUID)
 RETURNS UUID
 LANGUAGE plpgsql
@@ -574,7 +276,12 @@ BEGIN
         RAISE EXCEPTION 'غير مصرح: هذه العملية مخصصة للإدارة فقط' USING ERRCODE = '42501';
     END IF;
 
-    SELECT * INTO v_req FROM protection_requests WHERE id = p_request_id FOR UPDATE;
+    -- Row-level lock on request
+    SELECT * INTO v_req
+    FROM protection_requests
+    WHERE id = p_request_id
+    FOR UPDATE;
+
     IF v_req IS NULL THEN
         RAISE EXCEPTION 'طلب الحماية غير موجود' USING ERRCODE = 'P0002';
     END IF;
@@ -584,6 +291,7 @@ BEGIN
             USING ERRCODE = 'P0005';
     END IF;
 
+    -- Lock and verify no concurrent active protection on this number
     PERFORM 1 FROM protections 
     WHERE customer_number_id = v_req.customer_number_id 
       AND status = 'active'
@@ -598,12 +306,14 @@ BEGIN
             USING ERRCODE = '23505';
     END IF;
 
+    -- Fetch plan and number details
     SELECT * INTO v_plan FROM protection_plans WHERE id = v_req.plan_id;
     SELECT * INTO v_number FROM customer_numbers WHERE id = v_req.customer_number_id;
 
     v_start_time := NOW();
     v_end_time := v_start_time + (v_plan.duration_days || ' days')::INTERVAL;
 
+    -- 1. Update Request
     UPDATE protection_requests
     SET status = 'approved',
         reviewing_manager_id = v_manager_id,
@@ -611,6 +321,7 @@ BEGIN
         updated_at = NOW()
     WHERE id = p_request_id;
 
+    -- 2. Create Protection with historical snapshot
     INSERT INTO protections (
         customer_id,
         customer_number_id,
@@ -635,7 +346,11 @@ BEGIN
         'active'
     ) RETURNING id INTO v_new_protection_id;
 
-    SELECT * INTO v_settings FROM task_settings WHERE provider_id = v_req.provider_id;
+    -- 3. Check Task Settings for this telecom provider
+    SELECT * INTO v_settings
+    FROM task_settings
+    WHERE provider_id = v_req.provider_id;
+
     IF v_settings IS NOT NULL AND v_settings.first_task_enabled THEN
         v_task_due := v_start_time + (coalesce(v_settings.visibility_days_before_due, 3) || ' days')::INTERVAL;
         INSERT INTO payment_tasks (
@@ -655,6 +370,7 @@ BEGIN
         );
     END IF;
 
+    -- 4. Create Notification for Customer
     INSERT INTO notifications (
         customer_id,
         title,
@@ -667,6 +383,7 @@ BEGIN
         'request_approved'
     );
 
+    -- 5. Audit Log
     INSERT INTO audit_logs (
         actor_id,
         operation_type,
@@ -692,7 +409,9 @@ BEGIN
 END;
 $$;
 
--- Reject Protection Request
+-- ============================================================================
+-- 6. Function: Reject Protection Request (رفض طلب الحماية)
+-- ============================================================================
 CREATE OR REPLACE FUNCTION reject_protection_request(
     p_request_id UUID,
     p_rejection_reason TEXT
@@ -712,7 +431,12 @@ BEGIN
         RAISE EXCEPTION 'غير مصرح: هذه العملية مخصصة للإدارة فقط' USING ERRCODE = '42501';
     END IF;
 
-    SELECT * INTO v_req FROM protection_requests WHERE id = p_request_id FOR UPDATE;
+    -- Lock request row
+    SELECT * INTO v_req
+    FROM protection_requests
+    WHERE id = p_request_id
+    FOR UPDATE;
+
     IF v_req IS NULL THEN
         RAISE EXCEPTION 'طلب الحماية غير موجود' USING ERRCODE = 'P0002';
     END IF;
@@ -724,6 +448,7 @@ BEGIN
 
     SELECT * INTO v_number FROM customer_numbers WHERE id = v_req.customer_number_id;
 
+    -- 1. Update Request
     UPDATE protection_requests
     SET status = 'rejected',
         rejection_reason = p_rejection_reason,
@@ -732,6 +457,7 @@ BEGIN
         updated_at = NOW()
     WHERE id = p_request_id;
 
+    -- 2. Notify Customer
     INSERT INTO notifications (
         customer_id,
         title,
@@ -744,6 +470,7 @@ BEGIN
         'request_rejected'
     );
 
+    -- 3. Audit Log
     INSERT INTO audit_logs (
         actor_id,
         operation_type,
@@ -757,12 +484,16 @@ BEGIN
         p_request_id,
         'protection_requests',
         'تم رفض طلب الحماية للرقم ' || v_number.phone_number,
-        jsonb_build_object('reason', p_rejection_reason)
+        jsonb_build_object(
+            'reason', p_rejection_reason
+        )
     );
 END;
 $$;
 
--- Complete Payment Task
+-- ============================================================================
+-- 7. Function: Complete Payment Task (إكمال مهمة سداد وإنشاء المهمة الدورية التالية)
+-- ============================================================================
 CREATE OR REPLACE FUNCTION complete_payment_task(p_task_id UUID)
 RETURNS UUID
 LANGUAGE plpgsql
@@ -782,7 +513,12 @@ BEGIN
         RAISE EXCEPTION 'غير مصرح: هذه العملية مخصصة للإدارة فقط' USING ERRCODE = '42501';
     END IF;
 
-    SELECT * INTO v_task FROM payment_tasks WHERE id = p_task_id FOR UPDATE;
+    -- Lock task
+    SELECT * INTO v_task
+    FROM payment_tasks
+    WHERE id = p_task_id
+    FOR UPDATE;
+
     IF v_task IS NULL THEN
         RAISE EXCEPTION 'المهمة غير موجودة' USING ERRCODE = 'P0002';
     END IF;
@@ -795,6 +531,7 @@ BEGIN
         RAISE EXCEPTION 'لا يمكن إكمال مهمة ملغاة' USING ERRCODE = 'P0006';
     END IF;
 
+    -- 1. Mark task completed
     UPDATE payment_tasks
     SET status = 'completed',
         completion_date = NOW(),
@@ -802,6 +539,7 @@ BEGIN
         updated_at = NOW()
     WHERE id = p_task_id;
 
+    -- 2. Audit log for completion
     INSERT INTO audit_logs (
         actor_id,
         operation_type,
@@ -820,11 +558,16 @@ BEGIN
         jsonb_build_object('status', 'completed', 'completion_date', NOW())
     );
 
+    -- 3. Check for next recurring task
     SELECT * INTO v_prot FROM protections WHERE id = v_task.protection_id;
+    
     IF v_prot IS NOT NULL AND v_prot.status = 'active' THEN
         SELECT * INTO v_settings FROM task_settings WHERE provider_id = v_prot.provider_id;
+
         IF v_settings IS NOT NULL AND v_settings.recurring_task_enabled THEN
             v_next_due := NOW() + (v_settings.repeat_interval_days || ' days')::INTERVAL;
+            
+            -- Only create if next due date is within active protection window
             IF v_next_due < v_prot.end_date THEN
                 INSERT INTO payment_tasks (
                     protection_id,
@@ -865,7 +608,10 @@ BEGIN
 END;
 $$;
 
--- Reschedule Payment Task
+-- ============================================================================
+-- 8. Function: Reschedule Payment Task (إعادة جدولة مهمة)
+-- Rule: Requires manual_reschedule_enabled = true. Preserves previous due date.
+-- ============================================================================
 CREATE OR REPLACE FUNCTION reschedule_payment_task(
     p_task_id UUID,
     p_new_due_date TIMESTAMPTZ,
@@ -892,6 +638,7 @@ BEGIN
     END IF;
 
     SELECT * INTO v_task FROM payment_tasks WHERE id = p_task_id FOR UPDATE;
+
     IF v_task IS NULL THEN
         RAISE EXCEPTION 'المهمة غير موجودة' USING ERRCODE = 'P0002';
     END IF;
@@ -937,7 +684,10 @@ BEGIN
 END;
 $$;
 
--- Cancel Payment Task
+-- ============================================================================
+-- 9. Function: Cancel Payment Task (إلغاء مهمة سداد)
+-- Rule: Cancellation does NOT automatically generate a replacement task!
+-- ============================================================================
 CREATE OR REPLACE FUNCTION cancel_payment_task(
     p_task_id UUID,
     p_reason TEXT DEFAULT NULL
@@ -957,6 +707,7 @@ BEGIN
     END IF;
 
     SELECT * INTO v_task FROM payment_tasks WHERE id = p_task_id FOR UPDATE;
+
     IF v_task IS NULL THEN
         RAISE EXCEPTION 'المهمة غير موجودة' USING ERRCODE = 'P0002';
     END IF;
@@ -993,7 +744,10 @@ BEGIN
 END;
 $$;
 
--- Calculate Displayed Protection Status
+-- ============================================================================
+-- 10. Function: Calculate Displayed Protection Status (حساب حالة الحماية المعروضة)
+-- Invariant: 'needs_renewal' is calculated based on end_date and system_settings.
+-- ============================================================================
 CREATE OR REPLACE FUNCTION calculate_displayed_protection_status(p_protection_id UUID)
 RETURNS TEXT
 LANGUAGE plpgsql
@@ -1026,7 +780,9 @@ BEGIN
 END;
 $$;
 
--- Calculate Displayed Task Status
+-- ============================================================================
+-- 11. Function: Calculate Displayed Task Status (تصنيف حالة المهمة المعروضة)
+-- ============================================================================
 CREATE OR REPLACE FUNCTION calculate_displayed_task_status(p_task_id UUID)
 RETURNS TEXT
 LANGUAGE plpgsql
@@ -1042,6 +798,7 @@ BEGIN
         RETURN NULL;
     END IF;
 
+    -- Preserves terminal states
     IF v_task.status IN ('completed', 'cancelled') THEN
         RETURN v_task.status::TEXT;
     END IF;
