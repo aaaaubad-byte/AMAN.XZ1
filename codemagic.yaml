@@ -15,9 +15,19 @@ workflows:
         script: |
           npm install --legacy-peer-deps
 
+      - name: Install Capacitor
+        script: |
+          npm install --save-dev @capacitor/cli @capacitor/core @capacitor/android --legacy-peer-deps
+
       - name: Build web application
         script: |
           npm run build
+
+      - name: Add Android platform if missing
+        script: |
+          if [ ! -d "android" ]; then
+            npx cap add android
+          fi
 
       - name: Sync Capacitor
         script: |
