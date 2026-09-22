@@ -1,0 +1,3 @@
+workflows: android-debug: name: AMAN Android Debug APK instance_type: linux_x2 max_build_duration: 60
+
+environment: java: 17 scripts: - name: Check Java and Gradle script: | java -version ./gradlew --version - name: Build Debug APK script: | chmod +x ./gradlew ./gradlew assembleDebug --no-daemon --stacktrace artifacts: - "**/build/outputs/apk/debug/*.apk" publishing: email: recipients: - $CM_BUILD_ID 
