@@ -13,7 +13,7 @@ workflows:
 
       - name: Install dependencies
         script: |
-          npm ci
+          npm install
 
       - name: Build web application
         script: |
