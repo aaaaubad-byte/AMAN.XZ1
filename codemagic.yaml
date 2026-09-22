@@ -11,17 +11,9 @@ workflows:
         script: |
           echo "sdk.dir=$ANDROID_SDK_ROOT" > "$CM_BUILD_DIR/local.properties"
 
-      - name: Verify Android project
-        script: |
-          echo "=== Project structure ==="
-          ls -la
-          echo "=== App module ==="
-          ls -la app
-          echo "=== Gradle wrapper ==="
-          ls -la gradlew
-
       - name: Build native Android APK
         script: |
+          gradle wrapper --gradle-version 8.7
           chmod +x ./gradlew
           ./gradlew :app:assembleDebug --no-daemon --stacktrace
 
