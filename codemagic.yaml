@@ -1,11 +1,13 @@
 workflows:
 android:
 name: AMAN Android
-instance_type: linux_x2
+instance_type: mac_mini_m2
 environment:
 java: 17
 scripts:
+- name: Set Android SDK location
+script: echo "sdk.dir=$ANDROID_SDK_ROOT" > "$CM_BUILD_DIR/local.properties"
 - name: Build APK
 script: ./gradlew assembleDebug --no-daemon --stacktrace
 artifacts:
-- "**/build/outputs/apk/debug/*.apk"
+- "app/build/outputs/apk/debug/*.apk"
