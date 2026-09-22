@@ -2,6 +2,11 @@ package com.aman.app.data.model
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonPrimitive
 
 /**
  * Domain & Data Models for AMAN | أمان
@@ -152,7 +157,7 @@ data class ProtectionRequest(
     @SerialName("plan_id") val planId: String,
     @SerialName("payment_method_id") val paymentMethodId: String,
     @SerialName("protection_value") val protectionValue: Double = 0.0,
-    @SerialName("transfer_data") val transferData: String? = null,
+    @SerialName("transfer_data") val rawTransferData: JsonElement? = null,
     val status: ProtectionRequestStatus = ProtectionRequestStatus.PENDING,
     @SerialName("rejection_reason") val rejectionReason: String? = null,
     @SerialName("reviewed_by") val reviewedBy: String? = null,
@@ -171,7 +176,17 @@ data class ProtectionRequest(
     @SerialName("plan") val plan: ProtectionPlan? = null,
     @SerialName("provider") val provider: TelecomProvider? = null,
     @SerialName("payment_method") val paymentMethod: PaymentMethod? = null
-)
+) {
+    val transferData: String?
+        get() = when (val el = rawTransferData) {
+            null -> null
+            is JsonPrimitive -> el.contentOrNull
+            is JsonObject -> el["reference"]?.jsonPrimitive?.contentOrNull
+                ?: el["note"]?.jsonPrimitive?.contentOrNull
+                ?: el.toString()
+            else -> el.toString()
+        }
+}
 
 // ---------------------------------------------------------------------------
 // 7. الحمايات (Protections)
@@ -186,8 +201,10 @@ enum class StoredProtectionStatus {
 @Serializable
 enum class ProtectionDisplayStatus {
     @SerialName("active") ACTIVE,
-    @SerialName("needs_renewal") NEEDS_RENEWAL,
-    @SerialName("expired") EXPIRED
+    @SerialName("renewal_needed") NEEDS_RENEWAL,
+    @SerialName("expired") EXPIRED;
+
+    val isRenewalNeeded: Boolean get() = this == NEEDS_RENEWAL
 }
 
 @Serializable
@@ -259,9 +276,9 @@ data class Protection(
 
 @Serializable
 enum class TaskType {
-    @SerialName("first_task") FIRST,
-    @SerialName("recurring_task") RECURRING,
-    @SerialName("manual_task") MANUAL
+    @SerialName("first") FIRST,
+    @SerialName("recurring") RECURRING,
+    @SerialName("manual") MANUAL
 }
 
 @Serializable
@@ -344,11 +361,27 @@ data class AuditLog(
     @SerialName("action_type") val actionType: String,
     @SerialName("affected_record_id") val affectedRecord: String? = null,
     @SerialName("affected_table") val affectedTable: String? = null,
-    val details: String? = null,
-    @SerialName("old_data") val oldData: String? = null,
-    @SerialName("new_data") val newData: String? = null,
+    @SerialName("details") val rawDetails: JsonElement? = null,
+    @SerialName("old_data") val rawOldData: JsonElement? = null,
+    @SerialName("new_data") val rawNewData: JsonElement? = null,
     @SerialName("created_at") val createdAt: String? = null
 ) {
+    val details: String? get() = when (val el = rawDetails) {
+        null -> null
+        is JsonPrimitive -> el.contentOrNull
+        else -> el.toString()
+    }
+    val oldData: String? get() = when (val el = rawOldData) {
+        null -> null
+        is JsonPrimitive -> el.contentOrNull
+        else -> el.toString()
+    }
+    val newData: String? get() = when (val el = rawNewData) {
+        null -> null
+        is JsonPrimitive -> el.contentOrNull
+        else -> el.toString()
+    }
+    val recordId: String? get() = affectedRecord
     val previousData: String? get() = oldData
 }
 
@@ -360,12 +393,22 @@ data class AuditLog(
 data class SystemSettings(
     val id: Boolean = true,
     @SerialName("app_name") val appName: String = "AMAN",
-    @SerialName("contact_data") val contactData: String? = null,
+    @SerialName("contact_data") val rawContactData: JsonElement? = null,
     @SerialName("terms_and_conditions") val termsAndConditions: String? = null,
     @SerialName("privacy_policy") val privacyPolicy: String? = null,
     @SerialName("renewal_threshold_days") val renewalThresholdDays: Int = 30,
     @SerialName("updated_at") val updatedAt: String? = null
 ) {
+    val contactData: String?
+        get() = when (val el = rawContactData) {
+            null -> null
+            is JsonPrimitive -> el.contentOrNull
+            is JsonObject -> el["phone"]?.jsonPrimitive?.contentOrNull
+                ?: el["email"]?.jsonPrimitive?.contentOrNull
+                ?: el["info"]?.jsonPrimitive?.contentOrNull
+                ?: el.toString()
+            else -> el.toString()
+        }
     val contactInfo: String? get() = contactData
     val renewalWarningDays: Int get() = renewalThresholdDays
 }

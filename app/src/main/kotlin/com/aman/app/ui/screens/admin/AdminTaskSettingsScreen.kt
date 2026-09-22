@@ -235,7 +235,7 @@ fun TaskSettingEditorCard(
                     firstTaskEnabled = firstTaskEnabled,
                     firstTaskAmount = firstTaskAmount.toDoubleOrNull(),
                     recurringTaskEnabled = recurringEnabled,
-                    recurringCycleDays = recurringCycleDays.toIntOrNull() ?: 30,
+                    repeatIntervalDays = recurringCycleDays.toIntOrNull() ?: 30,
                     recurringTaskAmount = recurringAmount.toDoubleOrNull() ?: 0.0,
                     daysVisibleBeforeDue = visibleDays.toIntOrNull() ?: 5,
                     manualRescheduleEnabled = manualReschedule

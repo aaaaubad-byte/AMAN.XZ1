@@ -7,6 +7,8 @@ import com.aman.app.data.remote.AmanSupabase
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.rpc
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.buildJsonArray
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.put
 
 /**
@@ -207,7 +209,7 @@ class AdminRepositoryImpl : AdminRepository {
         return try {
             val params = buildJsonObject {
                 put("p_request_id", requestId)
-                put("p_rejection_reason", reason.trim())
+                put("p_reason", reason.trim())
             }
             AmanSupabase.postgrest.rpc(
                 function = "reject_protection_request",
@@ -271,20 +273,28 @@ class AdminRepositoryImpl : AdminRepository {
     override suspend fun updateProvider(provider: TelecomProvider): AmanResult<TelecomProvider> {
         if (!AmanSupabase.isConfigured()) return AmanResult.Error(AmanError.ConfigurationError("Supabase غير مهيأ"))
         return try {
-            val updated = AmanSupabase.postgrest.from("telecom_providers")
-                .update(
-                    mapOf(
-                        "name" to provider.name,
-                        "code" to provider.code,
-                        "number_length" to provider.numberLength,
-                        "display_order" to provider.displayOrder,
-                        "is_active" to provider.isActive,
-                        "is_visible_to_customer" to provider.isVisibleToCustomer
-                    )
-                ) {
-                    filter { eq("id", provider.id) }
-                    select()
-                }.decodeSingle<TelecomProvider>()
+            val prefixes = try {
+                AmanSupabase.postgrest.from("telecom_prefixes")
+                    .select { filter { eq("provider_id", provider.id) } }
+                    .decodeList<TelecomPrefix>()
+                    .map { it.prefix }
+            } catch (_: Exception) {
+                emptyList()
+            }
+            val params = buildJsonObject {
+                put("p_provider_id", provider.id)
+                put("p_name", provider.name.trim())
+                put("p_code", provider.code.trim().uppercase())
+                put("p_phone_length", provider.phoneLength)
+                put("p_prefixes", buildJsonArray { prefixes.forEach { add(JsonPrimitive(it)) } })
+                put("p_is_active", provider.isActive)
+                put("p_is_visible_to_customers", provider.isVisibleToCustomer)
+                put("p_display_order", provider.displayOrder)
+            }
+            val updated = AmanSupabase.postgrest.rpc(
+                function = "admin_update_telecom_provider",
+                parameters = params
+            ).decodeAs<TelecomProvider>()
             AmanResult.Success(updated)
         } catch (e: Exception) {
             AmanResult.Error(AmanError.DatabaseError("تعذر تحديث شركة الاتصالات: ${e.message}", cause = e))
@@ -346,19 +356,19 @@ class AdminRepositoryImpl : AdminRepository {
     override suspend fun updatePlan(plan: ProtectionPlan): AmanResult<ProtectionPlan> {
         if (!AmanSupabase.isConfigured()) return AmanResult.Error(AmanError.ConfigurationError("Supabase غير مهيأ"))
         return try {
-            val updated = AmanSupabase.postgrest.from("protection_plans")
-                .update(
-                    mapOf(
-                        "name" to plan.name,
-                        "price" to plan.price,
-                        "duration_days" to plan.durationDays,
-                        "is_active" to plan.isActive,
-                        "is_visible_to_customer" to plan.isVisibleToCustomer
-                    )
-                ) {
-                    filter { eq("id", plan.id) }
-                    select()
-                }.decodeSingle<ProtectionPlan>()
+            val params = buildJsonObject {
+                put("p_plan_id", plan.id)
+                put("p_provider_id", plan.providerId)
+                put("p_name", plan.name.trim())
+                put("p_price", plan.price)
+                put("p_duration_days", plan.durationDays)
+                put("p_is_active", plan.isActive)
+                put("p_is_visible_to_customers", plan.isVisibleToCustomer)
+            }
+            val updated = AmanSupabase.postgrest.rpc(
+                function = "admin_update_protection_plan",
+                parameters = params
+            ).decodeAs<ProtectionPlan>()
             AmanResult.Success(updated)
         } catch (e: Exception) {
             AmanResult.Error(AmanError.DatabaseError("تعذر تحديث باقة الحماية: ${e.message}", cause = e))
@@ -424,19 +434,18 @@ class AdminRepositoryImpl : AdminRepository {
     override suspend fun updatePaymentMethod(method: PaymentMethod): AmanResult<PaymentMethod> {
         if (!AmanSupabase.isConfigured()) return AmanResult.Error(AmanError.ConfigurationError("Supabase غير مهيأ"))
         return try {
-            val updated = AmanSupabase.postgrest.from("payment_methods")
-                .update(
-                    mapOf(
-                        "wallet_name" to method.walletName,
-                        "account_number" to method.accountNumber,
-                        "account_holder_name" to method.accountHolderName,
-                        "payment_instructions" to method.paymentInstructions,
-                        "is_active" to method.isActive
-                    )
-                ) {
-                    filter { eq("id", method.id) }
-                    select()
-                }.decodeSingle<PaymentMethod>()
+            val params = buildJsonObject {
+                put("p_payment_method_id", method.id)
+                put("p_name", method.name.trim())
+                put("p_account_number", method.accountNumber.trim())
+                put("p_account_owner_name", method.accountOwnerName.trim())
+                put("p_payment_instructions", method.paymentInstructions?.trim() ?: "")
+                put("p_is_active", method.isActive)
+            }
+            val updated = AmanSupabase.postgrest.rpc(
+                function = "admin_update_payment_method",
+                parameters = params
+            ).decodeAs<PaymentMethod>()
             AmanResult.Success(updated)
         } catch (e: Exception) {
             AmanResult.Error(AmanError.DatabaseError("تعذر تحديث طريقة الدفع: ${e.message}", cause = e))
@@ -484,11 +493,11 @@ class AdminRepositoryImpl : AdminRepository {
             val params = buildJsonObject {
                 put("p_task_id", taskId)
             }
-            val nextTaskId = AmanSupabase.postgrest.rpc(
+            val completedTask = AmanSupabase.postgrest.rpc(
                 function = "complete_payment_task",
                 parameters = params
-            ).decodeAsOrNull<String>() ?: ""
-            AmanResult.Success(nextTaskId)
+            ).decodeAs<PaymentTask>()
+            AmanResult.Success(completedTask.id)
         } catch (e: Exception) {
             AmanResult.Error(AmanError.DatabaseError("فشل إكمال المهمة: ${e.message}", cause = e))
         }
