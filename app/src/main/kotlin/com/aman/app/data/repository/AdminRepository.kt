@@ -474,7 +474,7 @@ class AdminRepositoryImpl : AdminRepository {
             val nextTaskId = AmanSupabase.postgrest.rpc(
                 function = "complete_payment_task",
                 parameters = params
-            ).decodeAs<String>()
+            ).decodeAsOrNull<String>() ?: ""
             AmanResult.Success(nextTaskId)
         } catch (e: Exception) {
             AmanResult.Error(AmanError.DatabaseError("فشل إكمال المهمة: ${e.message}", cause = e))
@@ -540,8 +540,8 @@ class AdminRepositoryImpl : AdminRepository {
                         "first_task_amount" to settings.firstTaskAmount,
                         "recurring_task_enabled" to settings.recurringTaskEnabled,
                         "recurring_task_amount" to settings.recurringTaskAmount,
-                        "recurring_cycle_days" to settings.recurringCycleDays,
-                        "days_visible_before_due" to settings.daysVisibleBeforeDue,
+                        "repeat_interval_days" to settings.recurringCycleDays,
+                        "visibility_days_before_due" to settings.daysVisibleBeforeDue,
                         "manual_reschedule_enabled" to settings.manualRescheduleEnabled
                     )
                 ) {
@@ -558,13 +558,13 @@ class AdminRepositoryImpl : AdminRepository {
     // 10. إعدادات النظام (System Settings)
     // -----------------------------------------------------------------------
     override suspend fun getSystemSettings(): AmanResult<SystemSettings> {
-        if (!AmanSupabase.isConfigured()) return AmanResult.Success(SystemSettings())
+        if (!AmanSupabase.isConfigured()) return AmanResult.Error(AmanError.ConfigurationError("Supabase غير مهيأ"))
         return try {
             val settings = AmanSupabase.postgrest.from("system_settings")
                 .select().decodeSingleOrNull<SystemSettings>() ?: SystemSettings()
             AmanResult.Success(settings)
         } catch (e: Exception) {
-            AmanResult.Success(SystemSettings())
+            AmanResult.Error(AmanError.DatabaseError("تعذر تحميل إعدادات النظام: ${e.message}", cause = e))
         }
     }
 
@@ -575,9 +575,10 @@ class AdminRepositoryImpl : AdminRepository {
                 .update(
                     mapOf(
                         "app_name" to settings.appName,
-                        "contact_info" to settings.contactInfo,
-                        "terms_and_conditions" to settings.termsAndConditions,
-                        "privacy_policy" to settings.privacyPolicy
+                        "support_contact" to settings.contactInfo,
+                        "terms_conditions" to settings.termsAndConditions,
+                        "privacy_policy" to settings.privacyPolicy,
+                        "renewal_warning_days" to settings.renewalWarningDays
                     )
                 ) {
                     filter { eq("id", settings.id) }

@@ -119,7 +119,7 @@ fun AmanCustomerDrawerContent(
                                 .padding(horizontal = 8.dp, vertical = 2.dp)
                         ) {
                             Text(
-                                text = if (user?.role == com.aman.app.data.model.UserRole.ADMIN) "مدير النظام" else "حساب عميل",
+                                text = if (user?.role?.isManagerOrAdmin == true) "مدير النظام" else "حساب عميل",
                                 color = Primary,
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Medium
@@ -141,7 +141,7 @@ fun AmanCustomerDrawerContent(
                     .verticalScroll(rememberScrollState())
                     .padding(horizontal = 12.dp)
             ) {
-                if (user?.role == com.aman.app.data.model.UserRole.ADMIN) {
+                if (user?.role?.isManagerOrAdmin == true) {
                     NavigationDrawerItem(
                         icon = {
                             Icon(

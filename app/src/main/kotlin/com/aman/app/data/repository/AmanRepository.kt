@@ -6,6 +6,9 @@ import com.aman.app.data.model.*
 import com.aman.app.data.remote.AmanSupabase
 import io.github.jan.supabase.gotrue.auth
 import io.github.jan.supabase.postgrest.from
+import io.github.jan.supabase.postgrest.rpc
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 
 /**
  * Repository contracts and Supabase implementations for AMAN | أمان.
@@ -22,6 +25,8 @@ interface CustomerNumberRepository {
     suspend fun getNumbersByCustomer(customerId: String): AmanResult<List<CustomerNumber>>
     suspend fun getAllNumbers(): AmanResult<List<CustomerNumber>>
     suspend fun addCustomerNumber(phoneNumber: String): AmanResult<CustomerNumber>
+    suspend fun registerCustomerNumber(phoneNumber: String): AmanResult<CustomerNumber>
+    suspend fun detectProviderFromPrefix(prefix: String): AmanResult<TelecomProvider?>
     suspend fun getNumberDetails(numberId: String): AmanResult<CustomerNumber?>
 }
 
@@ -51,24 +56,53 @@ class CustomerNumberRepositoryImpl : CustomerNumberRepository {
     }
 
     override suspend fun addCustomerNumber(phoneNumber: String): AmanResult<CustomerNumber> {
-        if (!AmanSupabase.isConfigured()) return AmanResult.Error(AmanError.ConfigurationError("Supabase غير مهيأ"))
-        val currentUser = AmanSupabase.auth.currentUserOrNull()
-            ?: return AmanResult.Error(AmanError.AuthenticationError("المستخدم غير مسجل الدخول"))
+        return registerCustomerNumber(phoneNumber)
+    }
 
+    override suspend fun registerCustomerNumber(phoneNumber: String): AmanResult<CustomerNumber> {
+        if (!AmanSupabase.isConfigured()) return AmanResult.Error(AmanError.ConfigurationError("Supabase غير مهيأ"))
         return try {
-            // Automatic prefix detection handled via RPC or backend trigger as required by AMAN.XZ.txt
-            val created = AmanSupabase.postgrest.from("customer_numbers")
-                .insert(
-                    mapOf(
-                        "customer_id" to currentUser.id,
-                        "phone_number" to phoneNumber.trim()
-                    )
-                ) {
-                    select()
+            val params = buildJsonObject {
+                put("p_phone_number", phoneNumber.trim())
+            }
+            val newNumberId = AmanSupabase.postgrest.rpc(
+                function = "register_customer_number",
+                parameters = params
+            ).decodeAs<String>()
+
+            val record = AmanSupabase.postgrest.from("customer_numbers")
+                .select {
+                    filter { eq("id", newNumberId) }
                 }.decodeSingle<CustomerNumber>()
-            AmanResult.Success(created)
+
+            AmanResult.Success(record)
         } catch (e: Exception) {
-            AmanResult.Error(AmanError.DatabaseError("تعذر إضافة الرقم: ${e.message}", cause = e))
+            AmanResult.Error(AmanError.DatabaseError("تعذر تسجيل الرقم: ${e.message}", cause = e))
+        }
+    }
+
+    override suspend fun detectProviderFromPrefix(prefix: String): AmanResult<TelecomProvider?> {
+        if (!AmanSupabase.isConfigured()) return AmanResult.Error(AmanError.ConfigurationError("Supabase غير مهيأ"))
+        return try {
+            val params = buildJsonObject {
+                put("p_phone_number", prefix.trim())
+            }
+            val providerId = AmanSupabase.postgrest.rpc(
+                function = "identify_provider_from_prefix",
+                parameters = params
+            ).decodeAsOrNull<String>()
+
+            if (providerId.isNullOrBlank()) {
+                AmanResult.Success(null)
+            } else {
+                val provider = AmanSupabase.postgrest.from("telecom_providers")
+                    .select {
+                        filter { eq("id", providerId) }
+                    }.decodeSingleOrNull<TelecomProvider>()
+                AmanResult.Success(provider)
+            }
+        } catch (e: Exception) {
+            AmanResult.Error(AmanError.DatabaseError("تعذر التعرف على شركة الاتصالات: ${e.message}", cause = e))
         }
     }
 
@@ -210,6 +244,12 @@ interface ProtectionRequestRepository {
         protectionValue: Double,
         transferData: String
     ): AmanResult<ProtectionRequest>
+    suspend fun submitProtectionRequest(
+        customerNumberId: String,
+        planId: String,
+        paymentMethodId: String,
+        transferData: String
+    ): AmanResult<ProtectionRequest>
 }
 
 class ProtectionRequestRepositoryImpl : ProtectionRequestRepository {
@@ -244,26 +284,34 @@ class ProtectionRequestRepositoryImpl : ProtectionRequestRepository {
         protectionValue: Double,
         transferData: String
     ): AmanResult<ProtectionRequest> {
-        if (!AmanSupabase.isConfigured()) return AmanResult.Error(AmanError.ConfigurationError("Supabase غير مهيأ"))
-        val currentUser = AmanSupabase.auth.currentUserOrNull()
-            ?: return AmanResult.Error(AmanError.AuthenticationError("المستخدم غير مسجل الدخول"))
+        return submitProtectionRequest(customerNumberId, planId, paymentMethodId, transferData)
+    }
 
+    override suspend fun submitProtectionRequest(
+        customerNumberId: String,
+        planId: String,
+        paymentMethodId: String,
+        transferData: String
+    ): AmanResult<ProtectionRequest> {
+        if (!AmanSupabase.isConfigured()) return AmanResult.Error(AmanError.ConfigurationError("Supabase غير مهيأ"))
         return try {
-            val created = AmanSupabase.postgrest.from("protection_requests")
-                .insert(
-                    mapOf(
-                        "customer_id" to currentUser.id,
-                        "customer_number_id" to customerNumberId,
-                        "plan_id" to planId,
-                        "payment_method_id" to paymentMethodId,
-                        "protection_value" to protectionValue,
-                        "transfer_data" to transferData,
-                        "status" to "pending"
-                    )
-                ) {
-                    select()
+            val params = buildJsonObject {
+                put("p_customer_number_id", customerNumberId)
+                put("p_plan_id", planId)
+                put("p_payment_method_id", paymentMethodId)
+                put("p_transfer_reference", transferData.trim())
+            }
+            val newRequestId = AmanSupabase.postgrest.rpc(
+                function = "submit_protection_request",
+                parameters = params
+            ).decodeAs<String>()
+
+            val record = AmanSupabase.postgrest.from("protection_requests")
+                .select {
+                    filter { eq("id", newRequestId) }
                 }.decodeSingle<ProtectionRequest>()
-            AmanResult.Success(created)
+
+            AmanResult.Success(record)
         } catch (e: Exception) {
             AmanResult.Error(AmanError.DatabaseError("تعذر إرسال طلب الحماية: ${e.message}", cause = e))
         }
@@ -373,7 +421,7 @@ class NotificationRepositoryImpl : NotificationRepository {
                 }.decodeList<AppNotification>()
             AmanResult.Success(list.size)
         } catch (e: Exception) {
-            AmanResult.Success(0)
+            AmanResult.Error(AmanError.DatabaseError("تعذر جلب عدد الإشعارات: ${e.message}", cause = e))
         }
     }
 
@@ -408,7 +456,7 @@ class SystemSettingsRepositoryImpl : SystemSettingsRepository {
                 .decodeSingleOrNull<SystemSettings>() ?: SystemSettings()
             AmanResult.Success(settings)
         } catch (e: Exception) {
-            AmanResult.Success(SystemSettings())
+            AmanResult.Error(AmanError.DatabaseError("تعذر جلب إعدادات النظام: ${e.message}", cause = e))
         }
     }
 }

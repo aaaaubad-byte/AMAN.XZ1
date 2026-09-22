@@ -62,15 +62,7 @@ class AuthRepository : AuthRepositoryContract {
             if (userRecord != null) {
                 AmanResult.Success(userRecord)
             } else {
-                // Return default client representation while profile is provisioned
-                AmanResult.Success(
-                    AppUser(
-                        id = currentUser.id,
-                        name = currentUser.userMetadata?.get("name")?.toString() ?: "مستخدم أمان",
-                        email = currentUser.email ?: email,
-                        role = UserRole.CLIENT
-                    )
-                )
+                AmanResult.Error(AmanError.AuthenticationError("ملف المستخدم غير موجود في النظام. يرجى التواصل مع الإدارة"))
             }
         } catch (e: Exception) {
             AmanResult.Error(AmanError.AuthenticationError("فشل تسجيل الدخول: ${e.message}", e))

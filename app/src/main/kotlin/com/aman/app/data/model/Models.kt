@@ -14,7 +14,11 @@ import kotlinx.serialization.Serializable
 @Serializable
 enum class UserRole {
     @SerialName("client") CLIENT,
-    @SerialName("admin") ADMIN
+    @SerialName("manager") MANAGER,
+    @SerialName("admin") ADMIN;
+
+    val isManagerOrAdmin: Boolean
+        get() = this == MANAGER || this == ADMIN
 }
 
 @Serializable
@@ -56,10 +60,9 @@ data class TelecomPrefix(
 // ---------------------------------------------------------------------------
 @Serializable
 enum class CustomerNumberStatus {
-    @SerialName("unprotected") UNPROTECTED,
-    @SerialName("pending") PENDING,
-    @SerialName("protected") PROTECTED,
-    @SerialName("expired") EXPIRED
+    @SerialName("active") ACTIVE,
+    @SerialName("suspended") SUSPENDED,
+    @SerialName("inactive") INACTIVE
 }
 
 @Serializable
@@ -75,7 +78,7 @@ data class CustomerNumber(
     @SerialName("customer_id") val customerId: String,
     @SerialName("provider_id") val providerId: String,
     @SerialName("phone_number") val phoneNumber: String,
-    val status: CustomerNumberStatus = CustomerNumberStatus.UNPROTECTED,
+    val status: CustomerNumberStatus = CustomerNumberStatus.ACTIVE,
     @SerialName("protection_status") val protectionStatus: NumberProtectionStatus = NumberProtectionStatus.UNPROTECTED,
     @SerialName("created_at") val createdAt: String? = null,
     @SerialName("updated_at") val updatedAt: String? = null,
@@ -130,10 +133,10 @@ data class ProtectionRequest(
     @SerialName("plan_id") val planId: String,
     @SerialName("payment_method_id") val paymentMethodId: String,
     @SerialName("protection_value") val protectionValue: Double,
-    @SerialName("transfer_data") val transferData: String? = null,
+    @SerialName("transfer_reference") val transferData: String? = null,
     val status: ProtectionRequestStatus = ProtectionRequestStatus.PENDING,
     @SerialName("rejection_reason") val rejectionReason: String? = null,
-    @SerialName("reviewed_by") val reviewedBy: String? = null,
+    @SerialName("reviewing_manager_id") val reviewedBy: String? = null,
     @SerialName("reviewed_at") val reviewedAt: String? = null,
     @SerialName("created_at") val createdAt: String? = null,
     // Expanded relations
@@ -167,8 +170,8 @@ data class Protection(
     @SerialName("provider_id") val providerId: String,
     @SerialName("plan_id") val planId: String,
     @SerialName("created_from_request_id") val createdFromRequestId: String? = null,
-    @SerialName("price_at_purchase") val priceAtPurchase: Double,
-    @SerialName("duration_at_purchase") val durationAtPurchase: Int,
+    @SerialName("protection_value_at_purchase") val priceAtPurchase: Double,
+    @SerialName("duration_days_at_purchase") val durationAtPurchase: Int,
     @SerialName("start_date") val startDate: String,
     @SerialName("end_date") val endDate: String,
     val status: StoredProtectionStatus = StoredProtectionStatus.ACTIVE,
@@ -242,9 +245,11 @@ data class PaymentTask(
     val amount: Double,
     @SerialName("due_date") val dueDate: String,
     val status: TaskStatus = TaskStatus.UPCOMING,
-    @SerialName("completed_at") val completedAt: String? = null,
-    @SerialName("completed_by") val completedBy: String? = null,
-    @SerialName("reschedule_data") val rescheduleData: String? = null,
+    @SerialName("completion_date") val completedAt: String? = null,
+    @SerialName("completed_by_manager_id") val completedBy: String? = null,
+    @SerialName("previous_due_date") val previousDueDate: String? = null,
+    @SerialName("reschedule_reason") val rescheduleReason: String? = null,
+    @SerialName("cancellation_reason") val cancellationReason: String? = null,
     @SerialName("created_at") val createdAt: String? = null,
     @SerialName("updated_at") val updatedAt: String? = null
 )
@@ -260,8 +265,8 @@ data class TaskSettings(
     @SerialName("first_task_amount") val firstTaskAmount: Double = 0.0,
     @SerialName("recurring_task_enabled") val recurringTaskEnabled: Boolean = true,
     @SerialName("recurring_task_amount") val recurringTaskAmount: Double = 0.0,
-    @SerialName("recurring_cycle_days") val recurringCycleDays: Int = 30,
-    @SerialName("days_visible_before_due") val daysVisibleBeforeDue: Int = 3,
+    @SerialName("repeat_interval_days") val recurringCycleDays: Int = 30,
+    @SerialName("visibility_days_before_due") val daysVisibleBeforeDue: Int = 3,
     @SerialName("manual_reschedule_enabled") val manualRescheduleEnabled: Boolean = true
 )
 
@@ -274,7 +279,7 @@ data class AppNotification(
     @SerialName("customer_id") val customerId: String? = null,
     val title: String,
     val message: String,
-    val type: String,
+    @SerialName("notification_type") val type: String = "general",
     @SerialName("is_read") val isRead: Boolean = false,
     @SerialName("read_at") val readAt: String? = null,
     @SerialName("created_at") val createdAt: String? = null
@@ -287,9 +292,10 @@ data class AppNotification(
 data class AuditLog(
     val id: String,
     @SerialName("actor_id") val actorId: String? = null,
-    @SerialName("action_type") val actionType: String,
-    @SerialName("affected_record") val affectedRecord: String? = null,
-    val details: String? = null,
+    @SerialName("operation_type") val actionType: String,
+    @SerialName("affected_record_id") val affectedRecord: String? = null,
+    @SerialName("affected_table") val affectedTable: String? = null,
+    @SerialName("operation_details") val details: String? = null,
     @SerialName("previous_data") val previousData: String? = null,
     @SerialName("new_data") val newData: String? = null,
     @SerialName("created_at") val createdAt: String? = null
@@ -302,9 +308,10 @@ data class AuditLog(
 data class SystemSettings(
     val id: String = "",
     @SerialName("app_name") val appName: String = "AMAN | أمان",
-    @SerialName("contact_info") val contactInfo: String? = null,
-    @SerialName("terms_and_conditions") val termsAndConditions: String? = null,
-    @SerialName("privacy_policy") val privacyPolicy: String? = null
+    @SerialName("support_contact") val contactInfo: String? = null,
+    @SerialName("terms_conditions") val termsAndConditions: String? = null,
+    @SerialName("privacy_policy") val privacyPolicy: String? = null,
+    @SerialName("renewal_warning_days") val renewalWarningDays: Int = 7
 )
 
 // ---------------------------------------------------------------------------

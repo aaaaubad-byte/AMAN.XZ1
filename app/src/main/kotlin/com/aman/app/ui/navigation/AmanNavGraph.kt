@@ -85,7 +85,7 @@ fun AmanNavGraph(
                             authViewModel.restoreSession { restoredUser ->
                                 if (restoredUser != null) {
                                     currentUser = restoredUser
-                                    val destination = if (restoredUser.role == UserRole.ADMIN) {
+                                    val destination = if (restoredUser.role.isManagerOrAdmin) {
                                         Screen.AdminDashboard.route
                                     } else {
                                         Screen.ClientHome.route
@@ -110,7 +110,7 @@ fun AmanNavGraph(
                         onLoginSuccess = {
                             authViewModel.restoreSession { user ->
                                 currentUser = user
-                                val destination = if (user?.role == UserRole.ADMIN) {
+                                val destination = if (user?.role?.isManagerOrAdmin == true) {
                                     Screen.AdminDashboard.route
                                 } else {
                                     Screen.ClientHome.route
