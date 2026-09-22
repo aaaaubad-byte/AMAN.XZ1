@@ -56,7 +56,7 @@ class AdminSystemSettingsViewModel(
         val current = (_uiState.value as? AdminSystemSettingsUiState.Content)?.settings ?: SystemSettings()
         val updated = current.copy(
             appName = appName.trim(),
-            contactInfo = contactInfo?.trim(),
+            contactData = contactInfo?.trim(),
             termsAndConditions = terms?.trim(),
             privacyPolicy = privacy?.trim()
         )

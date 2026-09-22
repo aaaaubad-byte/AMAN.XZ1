@@ -94,7 +94,7 @@ fun AdminCustomerNumbersScreen(
                 is AdminCustomerNumbersUiState.Content -> {
                     val filteredNumbers = state.numbers.filter {
                         it.phoneNumber.contains(searchQuery.trim()) ||
-                                (it.label?.contains(searchQuery.trim(), ignoreCase = true) == true)
+                                (state.providers[it.providerId]?.name?.contains(searchQuery.trim(), ignoreCase = true) == true)
                     }
 
                     Column(
@@ -108,7 +108,7 @@ fun AdminCustomerNumbersScreen(
                             value = searchQuery,
                             onValueChange = { searchQuery = it },
                             modifier = Modifier.fillMaxWidth(),
-                            placeholder = { Text("بحث برقم الهاتف أو التسمية...") },
+                            placeholder = { Text("بحث برقم الهاتف أو المشغل...") },
                             leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = TextSecondary) },
                             singleLine = true,
                             shape = RoundedCornerShape(12.dp)
@@ -168,7 +168,7 @@ fun AdminCustomerNumbersScreen(
                                                         color = TextPrimary
                                                     )
                                                     Text(
-                                                        text = "المشغل: ${provider?.name ?: "غير محدد"}${if (!number.label.isNullOrBlank()) " • ${number.label}" else ""}",
+                                                        text = "المشغل: ${provider?.name ?: "غير محدد"}",
                                                         style = MaterialTheme.typography.bodySmall,
                                                         color = TextSecondary
                                                     )
@@ -179,15 +179,15 @@ fun AdminCustomerNumbersScreen(
                                                 verticalAlignment = Alignment.CenterVertically,
                                                 horizontalArrangement = Arrangement.spacedBy(4.dp)
                                             ) {
-                                                if (number.isVerified) {
+                                                if (number.status == CustomerNumberStatus.ACTIVE) {
                                                     Icon(
                                                         Icons.Default.CheckCircle,
-                                                        contentDescription = "تم التحقق",
+                                                        contentDescription = "نشط",
                                                         tint = Success,
                                                         modifier = Modifier.size(16.dp)
                                                     )
                                                     Text(
-                                                        text = "تم التحقق",
+                                                        text = "نشط",
                                                         fontSize = 12.sp,
                                                         color = Success,
                                                         fontWeight = FontWeight.Medium
@@ -195,12 +195,12 @@ fun AdminCustomerNumbersScreen(
                                                 } else {
                                                     Icon(
                                                         Icons.Default.HourglassEmpty,
-                                                        contentDescription = "قيد التحقق",
+                                                        contentDescription = "معطل",
                                                         tint = Warning,
                                                         modifier = Modifier.size(16.dp)
                                                     )
                                                     Text(
-                                                        text = "قيد التحقق",
+                                                        text = "معطل",
                                                         fontSize = 12.sp,
                                                         color = Warning,
                                                         fontWeight = FontWeight.Medium

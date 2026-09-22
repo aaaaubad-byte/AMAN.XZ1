@@ -130,10 +130,10 @@ fun AdminCustomerDetailsScreen(
                                             Spacer(modifier = Modifier.width(8.dp))
                                             Column {
                                                 Text(num.phoneNumber, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                                                Text(num.label ?: "بدون تسمية", fontSize = 12.sp, color = TextSecondary)
+                                                Text(num.provider?.name ?: "رقم معتمد", fontSize = 12.sp, color = TextSecondary)
                                             }
                                         }
-                                        StatusBadge(status = num.verificationStatus)
+                                        StatusBadge(status = if (num.status == CustomerNumberStatus.ACTIVE) "نشط" else "معطل")
                                     }
                                 }
                             }

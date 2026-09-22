@@ -246,7 +246,7 @@ fun AdminPaymentMethodCard(
             }
         }
 
-        if (method.paymentInstructions.isNotBlank()) {
+        if (!method.paymentInstructions.isNullOrBlank()) {
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = "التعليمات: ${method.paymentInstructions}",

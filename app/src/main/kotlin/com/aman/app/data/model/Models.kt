@@ -27,10 +27,12 @@ data class AppUser(
     val name: String,
     val email: String,
     val role: UserRole = UserRole.CUSTOMER,
-    @SerialName("account_status") val accountStatus: String = "active",
+    @SerialName("status") val status: String = "active",
     @SerialName("created_at") val createdAt: String? = null,
     @SerialName("updated_at") val updatedAt: String? = null
-)
+) {
+    val accountStatus: String get() = status
+}
 
 // ---------------------------------------------------------------------------
 // 2. شركات الاتصالات والبادئات (Telecom Providers & Prefixes)
@@ -41,19 +43,24 @@ data class TelecomProvider(
     val id: String,
     val name: String,
     val code: String,
-    @SerialName("number_length") val numberLength: Int = 9,
+    @SerialName("phone_length") val phoneLength: Int = 9,
     @SerialName("is_active") val isActive: Boolean = true,
     @SerialName("is_visible_to_customers") val isVisibleToCustomer: Boolean = true,
     @SerialName("display_order") val displayOrder: Int = 0,
-    @SerialName("created_at") val createdAt: String? = null
-)
+    @SerialName("created_at") val createdAt: String? = null,
+    @SerialName("updated_at") val updatedAt: String? = null
+) {
+    val numberLength: Int get() = phoneLength
+}
 
 @Serializable
 data class TelecomPrefix(
     val id: String,
     @SerialName("provider_id") val providerId: String,
     val prefix: String,
-    @SerialName("is_active") val isActive: Boolean = true
+    @SerialName("is_active") val isActive: Boolean = true,
+    @SerialName("created_at") val createdAt: String? = null,
+    @SerialName("updated_at") val updatedAt: String? = null
 )
 
 // ---------------------------------------------------------------------------
@@ -98,10 +105,11 @@ data class ProtectionPlan(
     @SerialName("provider_id") val providerId: String,
     val name: String,
     val price: Double,
-    @SerialName("duration_days") val durationDays: Int,
+    @SerialName("protection_duration_days") val durationDays: Int = 30,
     @SerialName("is_active") val isActive: Boolean = true,
     @SerialName("is_visible_to_customers") val isVisibleToCustomer: Boolean = true,
-    @SerialName("created_at") val createdAt: String? = null
+    @SerialName("created_at") val createdAt: String? = null,
+    @SerialName("updated_at") val updatedAt: String? = null
 )
 
 // ---------------------------------------------------------------------------
@@ -113,13 +121,15 @@ data class PaymentMethod(
     val id: String,
     val name: String,
     @SerialName("account_number") val accountNumber: String,
-    @SerialName("account_holder_name") val accountHolderName: String,
-    val instructions: String? = null,
-    @SerialName("is_active") val isActive: Boolean = true
+    @SerialName("account_owner_name") val accountOwnerName: String = "",
+    @SerialName("payment_instructions") val paymentInstructions: String? = null,
+    @SerialName("is_active") val isActive: Boolean = true,
+    @SerialName("created_at") val createdAt: String? = null,
+    @SerialName("updated_at") val updatedAt: String? = null
 ) {
-    // Backwards compatibility accessor
     val walletName: String get() = name
-    val paymentInstructions: String? get() = instructions
+    val accountHolderName: String get() = accountOwnerName
+    val instructions: String? get() = paymentInstructions
 }
 
 // ---------------------------------------------------------------------------
@@ -141,13 +151,21 @@ data class ProtectionRequest(
     @SerialName("provider_id") val providerId: String,
     @SerialName("plan_id") val planId: String,
     @SerialName("payment_method_id") val paymentMethodId: String,
-    @SerialName("protection_value") val protectionValue: Double,
+    @SerialName("protection_value") val protectionValue: Double = 0.0,
     @SerialName("transfer_data") val transferData: String? = null,
     val status: ProtectionRequestStatus = ProtectionRequestStatus.PENDING,
     @SerialName("rejection_reason") val rejectionReason: String? = null,
     @SerialName("reviewed_by") val reviewedBy: String? = null,
     @SerialName("reviewed_at") val reviewedAt: String? = null,
+    @SerialName("plan_name_snapshot") val planNameSnapshot: String? = null,
+    @SerialName("plan_price_snapshot") val planPriceSnapshot: Double? = null,
+    @SerialName("plan_duration_days_snapshot") val planDurationDaysSnapshot: Int? = null,
+    @SerialName("payment_method_name_snapshot") val paymentMethodNameSnapshot: String? = null,
+    @SerialName("payment_account_number_snapshot") val paymentAccountNumberSnapshot: String? = null,
+    @SerialName("payment_account_owner_snapshot") val paymentAccountOwnerSnapshot: String? = null,
+    @SerialName("payment_instructions_snapshot") val paymentInstructionsSnapshot: String? = null,
     @SerialName("created_at") val createdAt: String? = null,
+    @SerialName("updated_at") val updatedAt: String? = null,
     // Expanded relations
     @SerialName("customer_number") val customerNumber: CustomerNumber? = null,
     @SerialName("plan") val plan: ProtectionPlan? = null,
@@ -180,17 +198,23 @@ data class Protection(
     @SerialName("provider_id") val providerId: String,
     @SerialName("plan_id") val planId: String,
     @SerialName("created_from_request_id") val createdFromRequestId: String? = null,
+    @SerialName("protection_value") val protectionValue: Double = 0.0,
+    @SerialName("protection_duration_days") val protectionDurationDays: Int = 30,
     @SerialName("start_date") val startDate: String,
     @SerialName("end_date") val endDate: String,
     val status: StoredProtectionStatus = StoredProtectionStatus.ACTIVE,
+    @SerialName("plan_name_snapshot") val planNameSnapshot: String? = null,
+    @SerialName("provider_name_snapshot") val providerNameSnapshot: String? = null,
     @SerialName("created_at") val createdAt: String? = null,
+    @SerialName("updated_at") val updatedAt: String? = null,
     // Expanded relations
     @SerialName("customer_number") val customerNumber: CustomerNumber? = null,
     @SerialName("plan") val plan: ProtectionPlan? = null,
     @SerialName("provider") val provider: TelecomProvider? = null
 ) {
-    // Backwards compatibility accessor for UI screens
-    val priceAtPurchase: Double get() = plan?.price ?: 0.0
+    // Backwards compatibility accessors for UI screens
+    val priceAtPurchase: Double get() = if (protectionValue > 0.0) protectionValue else (plan?.price ?: 0.0)
+    val durationAtPurchase: Int get() = if (protectionDurationDays > 0) protectionDurationDays else (plan?.durationDays ?: 30)
 
     /**
      * حساب الأيام المتبقية حتى تاريخ الانتهاء
@@ -198,7 +222,7 @@ data class Protection(
     fun daysRemaining(): Long {
         return try {
             val endEpoch = java.time.Instant.parse(
-                if (endDate.endsWith("Z") || endDate.contains("+")) endDate else "${endDate}Z"
+                if (endDate.endsWith("Z") || endDate.contains("+")) endDate else "Z"
             ).epochSecond
             val nowEpoch = java.time.Instant.now().epochSecond
             val diffSec = endEpoch - nowEpoch
@@ -235,8 +259,9 @@ data class Protection(
 
 @Serializable
 enum class TaskType {
-    @SerialName("first") FIRST,
-    @SerialName("recurring") RECURRING
+    @SerialName("first_task") FIRST,
+    @SerialName("recurring_task") RECURRING,
+    @SerialName("manual_task") MANUAL
 }
 
 @Serializable
@@ -253,17 +278,22 @@ data class PaymentTask(
     val id: String,
     @SerialName("protection_id") val protectionId: String,
     @SerialName("customer_number_id") val customerNumberId: String,
-    @SerialName("task_type") val taskType: TaskType,
+    @SerialName("task_type") val taskType: TaskType = TaskType.RECURRING,
     val amount: Double,
     @SerialName("due_date") val dueDate: String,
     val status: TaskStatus = TaskStatus.UPCOMING,
     @SerialName("completed_at") val completedAt: String? = null,
     @SerialName("completed_by") val completedBy: String? = null,
     @SerialName("previous_due_date") val previousDueDate: String? = null,
+    @SerialName("rescheduled_at") val rescheduledAt: String? = null,
+    @SerialName("rescheduled_by") val rescheduledBy: String? = null,
     @SerialName("reschedule_reason") val rescheduleReason: String? = null,
+    @SerialName("cancelled_at") val cancelledAt: String? = null,
+    @SerialName("cancelled_by") val cancelledBy: String? = null,
     @SerialName("cancellation_reason") val cancellationReason: String? = null,
     @SerialName("created_at") val createdAt: String? = null,
-    @SerialName("updated_at") val updatedAt: String? = null
+    @SerialName("updated_at") val updatedAt: String? = null,
+    @SerialName("customer_number") val customerNumber: CustomerNumber? = null
 )
 
 // ---------------------------------------------------------------------------
@@ -272,16 +302,20 @@ data class PaymentTask(
 
 @Serializable
 data class TaskSettings(
-    val id: String,
+    val id: String = "",
     @SerialName("provider_id") val providerId: String,
     @SerialName("first_task_enabled") val firstTaskEnabled: Boolean = false,
-    @SerialName("first_task_amount") val firstTaskAmount: Double = 0.0,
+    @SerialName("first_task_amount") val firstTaskAmount: Double? = 0.0,
     @SerialName("recurring_task_enabled") val recurringTaskEnabled: Boolean = true,
     @SerialName("recurring_task_amount") val recurringTaskAmount: Double = 0.0,
-    @SerialName("repeat_interval_days") val recurringCycleDays: Int = 30,
-    @SerialName("visibility_days_before_due") val daysVisibleBeforeDue: Int = 3,
-    @SerialName("manual_reschedule_enabled") val manualRescheduleEnabled: Boolean = true
-)
+    @SerialName("repeat_interval_days") val repeatIntervalDays: Int = 30,
+    @SerialName("days_visible_before_due") val daysVisibleBeforeDue: Int = 7,
+    @SerialName("manual_reschedule_enabled") val manualRescheduleEnabled: Boolean = true,
+    @SerialName("created_at") val createdAt: String? = null,
+    @SerialName("updated_at") val updatedAt: String? = null
+) {
+    val recurringCycleDays: Int get() = repeatIntervalDays
+}
 
 // ---------------------------------------------------------------------------
 // 10. الإشعارات (Notifications)
@@ -311,10 +345,12 @@ data class AuditLog(
     @SerialName("affected_record_id") val affectedRecord: String? = null,
     @SerialName("affected_table") val affectedTable: String? = null,
     val details: String? = null,
-    @SerialName("previous_data") val previousData: String? = null,
+    @SerialName("old_data") val oldData: String? = null,
     @SerialName("new_data") val newData: String? = null,
     @SerialName("created_at") val createdAt: String? = null
-)
+) {
+    val previousData: String? get() = oldData
+}
 
 // ---------------------------------------------------------------------------
 // 12. إعدادات النظام (System Settings)
@@ -330,7 +366,6 @@ data class SystemSettings(
     @SerialName("renewal_threshold_days") val renewalThresholdDays: Int = 30,
     @SerialName("updated_at") val updatedAt: String? = null
 ) {
-    // Backwards compatibility accessor for UI screens
     val contactInfo: String? get() = contactData
     val renewalWarningDays: Int get() = renewalThresholdDays
 }
