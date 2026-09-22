@@ -23,6 +23,16 @@ workflows:
         script: |
           npm run build
 
+      - name: Create Capacitor configuration
+        script: |
+          cat > capacitor.config.json <<'EOF'
+          {
+            "appId": "com.aman.app",
+            "appName": "أمان",
+            "webDir": "dist"
+          }
+          EOF
+
       - name: Add Android platform if missing
         script: |
           if [ ! -d "android" ]; then
