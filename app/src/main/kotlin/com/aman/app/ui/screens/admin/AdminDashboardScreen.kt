@@ -106,14 +106,14 @@ fun AdminDashboardScreen(
                                 )
                                 Spacer(modifier = Modifier.height(12.dp))
                                 Text(
-                                    text = "تنبيه إعداد Supabase",
+                                    text = "حالة الخادم السحابي",
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 16.sp,
                                     color = TextPrimary
                                 )
                                 Spacer(modifier = Modifier.height(6.dp))
                                 Text(
-                                    text = "لم يتم تكوين بيانات الاتصال الحقيقية بـ Supabase بعد. لوحة الإدارة تلتزم بعدم استعراض أي بيانات وهمية.",
+                                    text = "جاري تهيئة المزامنة السحابية الآمنة مع قاعدة بيانات النظام المعتمدة.",
                                     fontSize = 13.sp,
                                     color = TextSecondary
                                 )

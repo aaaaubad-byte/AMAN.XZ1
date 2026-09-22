@@ -99,7 +99,7 @@ fun AboutScreen(onBack: () -> Unit) {
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Text("رقم الإصدار", style = MaterialTheme.typography.bodySmall.copy(color = TextSecondary))
-                            Text("1.0.0 (Stage 3)", style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold))
+                            Text("1.0.0 (المعتمد)", style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold))
                         }
 
                         Row(
@@ -107,7 +107,7 @@ fun AboutScreen(onBack: () -> Unit) {
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Text("البيئة المدعومة", style = MaterialTheme.typography.bodySmall.copy(color = TextSecondary))
-                            Text("Android Native (Compose)", style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold))
+                            Text("أندرويد أصلي (Jetpack Compose)", style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold))
                         }
 
                         Row(
@@ -115,7 +115,7 @@ fun AboutScreen(onBack: () -> Unit) {
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Text("الربط السحابي", style = MaterialTheme.typography.bodySmall.copy(color = TextSecondary))
-                            Text("Supabase Cloud Backend", style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold))
+                            Text("سحابي مشفّر وآمن", style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold))
                         }
 
                         Row(

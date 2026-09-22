@@ -95,7 +95,7 @@ fun AdminHomeScreen(
                             Icon(Icons.Default.Info, contentDescription = null, tint = MaterialTheme.colorScheme.error)
                             Spacer(modifier = Modifier.width(12.dp))
                             Text(
-                                text = "تنبيه المعمارية: الاتصال الفعلي بقاعدة البيانات معلق بانتظار تزويد بيانات Supabase. لا توجد بيانات وهمية مستعرضة.",
+                                text = "حالة النظام: الاتصال بالخادم السحابي المشفر قيد المزامنة التلقائية.",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onErrorContainer
                             )

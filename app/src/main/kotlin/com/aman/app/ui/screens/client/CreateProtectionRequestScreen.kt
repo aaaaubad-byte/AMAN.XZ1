@@ -311,7 +311,7 @@ fun CreateProtectionRequestScreen(
                                     OutlinedTextField(
                                         value = transferDataInput,
                                         onValueChange = { transferDataInput = it },
-                                        placeholder = { Text("مثال: رقم الحوالة 82910398 باسم فلان...") },
+                                        placeholder = { Text("مثال: رقم الحوالة 82910398 أو رقم العملية في المحفظة...") },
                                         modifier = Modifier.fillMaxWidth(),
                                         minLines = 2,
                                         shape = RoundedCornerShape(12.dp),

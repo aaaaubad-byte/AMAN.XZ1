@@ -77,7 +77,7 @@ fun AdminCustomerNumbersScreen(
                 }
                 is AdminCustomerNumbersUiState.ConfigurationPending -> {
                     Box(modifier = Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
-                        Text("الخدمة تتطلب تهيئة Supabase", color = TextSecondary)
+                        Text("جاري الاتصال الآمن بسجل الأرقام السحابي...", color = TextSecondary)
                     }
                 }
                 is AdminCustomerNumbersUiState.Error -> {

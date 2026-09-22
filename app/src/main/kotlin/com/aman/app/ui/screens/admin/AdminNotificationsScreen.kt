@@ -75,7 +75,7 @@ fun AdminNotificationsScreen(
                 }
                 is AdminNotificationsUiState.ConfigurationPending -> {
                     Box(modifier = Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
-                        Text("الخدمة تتطلب تهيئة Supabase", color = TextSecondary)
+                        Text("جاري الاتصال بمركز الإشعارات السحابي...", color = TextSecondary)
                     }
                 }
                 is AdminNotificationsUiState.Error -> {

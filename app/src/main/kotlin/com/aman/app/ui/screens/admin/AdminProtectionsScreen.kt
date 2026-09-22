@@ -84,9 +84,9 @@ fun AdminProtectionsScreen(
                     }
                     is AdminProtectionsUiState.ConfigurationPending -> {
                         AmanCard {
-                            Text("تنبيه الاتصال بقاعدة البيانات", fontWeight = FontWeight.Bold, color = TextPrimary)
+                            Text("حالة المزامنة السحابية", fontWeight = FontWeight.Bold, color = TextPrimary)
                             Spacer(modifier = Modifier.height(4.dp))
-                            Text("الاتصال بـ Supabase معلق بانتظار تزويد المفاتيح الحقيقية.", color = TextSecondary, fontSize = 13.sp)
+                            Text("جاري الاتصال الآمن بسجل الحمايات السحابي. اضغط على زر التحديث لإعادة المزامنة.", color = TextSecondary, fontSize = 13.sp)
                         }
                     }
                     is AdminProtectionsUiState.Error -> {
@@ -101,7 +101,7 @@ fun AdminProtectionsScreen(
                         OutlinedTextField(
                             value = state.searchQuery,
                             onValueChange = { viewModel.onSearchQueryChanged(it) },
-                            placeholder = { Text("بحث برقم الهاتف أو معرف العميل...") },
+                            placeholder = { Text("بحث برقم الهاتف أو رقم الوثيقة...") },
                             leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = TextSecondary) },
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(12.dp),
@@ -196,8 +196,13 @@ fun AdminProtectionItemCard(prot: Protection) {
                     color = TextPrimary
                 )
                 Text(
-                    text = "الشركة: ${prot.provider?.name ?: "-"} • الباقة: ${prot.plan?.name ?: "-"}",
+                    text = "رقم الوثيقة: #PROT-${prot.id.take(8).uppercase()} • الشركة: ${prot.provider?.name ?: "-"}",
                     fontSize = 12.sp,
+                    color = TextSecondary
+                )
+                Text(
+                    text = "الباقة: ${prot.plan?.name ?: "-"}",
+                    fontSize = 11.sp,
                     color = TextSecondary
                 )
             }

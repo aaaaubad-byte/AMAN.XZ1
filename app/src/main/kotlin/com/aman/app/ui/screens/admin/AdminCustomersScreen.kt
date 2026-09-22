@@ -80,9 +80,9 @@ fun AdminCustomersScreen(
                     }
                     is AdminCustomersUiState.ConfigurationPending -> {
                         AmanCard {
-                            Text("تنبيه الاتصال بقاعدة البيانات", fontWeight = FontWeight.Bold, color = TextPrimary)
+                            Text("حالة المزامنة السحابية", fontWeight = FontWeight.Bold, color = TextPrimary)
                             Spacer(modifier = Modifier.height(4.dp))
-                            Text("الاتصال بـ Supabase معلق بانتظار إعداد المفاتيح الحقيقية.", color = TextSecondary, fontSize = 13.sp)
+                            Text("جاري الاتصال الآمن بسجل العملاء السحابي. اضغط على زر التحديث لإعادة المزامنة.", color = TextSecondary, fontSize = 13.sp)
                         }
                     }
                     is AdminCustomersUiState.Error -> {

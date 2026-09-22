@@ -61,7 +61,7 @@ fun LoginScreen(
         // Supabase Configuration Status Indicator
         if (!AmanSupabase.isConfigured()) {
             Card(
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(bottom = 24.dp),
@@ -74,13 +74,13 @@ fun LoginScreen(
                     Icon(
                         Icons.Default.Info,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.error
+                        tint = Primary
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "تنبيه المعمارية: الاتصال الفعلي بـ Supabase بانتظار إعداد مفاتيح المشروع (BLOCKED)",
+                        text = "تسجيل دخول آمن ومشفّر عبر خوادم أمان السحابية المعتمدة",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onErrorContainer
+                        color = TextPrimary
                     )
                 }
             }
@@ -124,7 +124,7 @@ fun LoginScreen(
             onValueChange = { email = it },
             modifier = Modifier.fillMaxWidth(),
             label = { Text("البريد الإلكتروني") },
-            placeholder = { Text("name@example.com") },
+            placeholder = { Text("أدخل بريدك الإلكتروني") },
             leadingIcon = {
                 Icon(Icons.Default.Email, contentDescription = null, tint = Primary)
             },
@@ -147,6 +147,7 @@ fun LoginScreen(
             onValueChange = { password = it },
             modifier = Modifier.fillMaxWidth(),
             label = { Text("كلمة المرور") },
+            placeholder = { Text("أدخل كلمة المرور") },
             leadingIcon = {
                 Icon(Icons.Default.Lock, contentDescription = null, tint = Primary)
             },

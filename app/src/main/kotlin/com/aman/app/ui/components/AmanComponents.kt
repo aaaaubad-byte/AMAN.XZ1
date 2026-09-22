@@ -56,8 +56,19 @@ fun StatusBadge(
     val (bgColor, textColor, textAr) = when (status.lowercase()) {
         "protected", "محمي" -> Triple(StatusProtectedBg, StatusProtectedText, "محمي")
         "pending", "قيد المراجعة" -> Triple(StatusPendingBg, StatusPendingText, "قيد المراجعة")
-        "approved", "مقبول" -> Triple(StatusApprovedBg, StatusApprovedText, "مقبول")
+        "approved", "مقبول" -> Triple(StatusApprovedBg, StatusApprovedText, "مقبول ومفعل")
         "rejected", "مرفوض" -> Triple(StatusRejectedBg, StatusRejectedText, "مرفوض")
+        "upcoming", "مجدول" -> Triple(StatusPendingBg, StatusPendingText, "مجدول قادماً")
+        "due", "مستحق" -> Triple(Color(0xFFFEF3C7), Color(0xFFD97706), "مستحق اليوم")
+        "due_soon", "يستحق قريباً" -> Triple(Color(0xFFFEF3C7), Color(0xFFD97706), "يستحق قريباً")
+        "overdue", "متأخر" -> Triple(StatusRejectedBg, StatusRejectedText, "متأخر السداد")
+        "completed", "مكتمل" -> Triple(StatusProtectedBg, StatusProtectedText, "مكتمل")
+        "cancelled", "ملغي" -> Triple(Color(0xFFF1F5F9), Color(0xFF64748B), "ملغي")
+        "active", "نشط" -> Triple(StatusProtectedBg, StatusProtectedText, "نشط وسارٍ")
+        "expired", "منتهي" -> Triple(StatusRejectedBg, StatusRejectedText, "منتهي الصلاحية")
+        "unprotected", "غير محمي" -> Triple(Color(0xFFF1F5F9), Color(0xFF64748B), "غير محمي")
+        "suspended", "معلق" -> Triple(StatusRejectedBg, StatusRejectedText, "معلق مؤقتاً")
+        "needs_renewal", "بحاجة لتجديد" -> Triple(Color(0xFFFEF3C7), Color(0xFFD97706), "بحاجة لتجديد")
         else -> Triple(Color(0xFFF1F5F9), Color(0xFF475569), status)
     }
 

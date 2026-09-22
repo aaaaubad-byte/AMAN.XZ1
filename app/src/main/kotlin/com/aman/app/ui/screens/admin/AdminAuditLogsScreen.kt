@@ -82,9 +82,9 @@ fun AdminAuditLogsScreen(
                     }
                     is AdminAuditLogsUiState.ConfigurationPending -> {
                         AmanCard {
-                            Text("تنبيه الاتصال بقاعدة البيانات", fontWeight = FontWeight.Bold, color = TextPrimary)
+                            Text("حالة المزامنة السحابية", fontWeight = FontWeight.Bold, color = TextPrimary)
                             Spacer(modifier = Modifier.height(4.dp))
-                            Text("الاتصال بـ Supabase معلق بانتظار تزويد المفاتيح الحقيقية.", color = TextSecondary, fontSize = 13.sp)
+                            Text("جاري الاتصال الآمن بسجل العمليات السحابي. اضغط على زر التحديث لإعادة المزامنة.", color = TextSecondary, fontSize = 13.sp)
                         }
                     }
                     is AdminAuditLogsUiState.Error -> {
@@ -133,8 +133,19 @@ fun AuditLogCard(log: AuditLog) {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                val actionArabic = when (log.action.uppercase()) {
+                    "INSERT" -> "إضافة سجل جديد"
+                    "UPDATE" -> "تعديل وتحديث"
+                    "DELETE" -> "حذف سجل"
+                    "APPROVE" -> "موافقة واعتماد"
+                    "REJECT" -> "رفض الطلب"
+                    "COMPLETE" -> "إكمال وسداد"
+                    "RESCHEDULE" -> "إعادة جدولة"
+                    "CANCEL" -> "إلغاء العملية"
+                    else -> log.action
+                }
                 Text(
-                    text = log.action,
+                    text = actionArabic,
                     fontWeight = FontWeight.Bold,
                     fontSize = 14.sp,
                     color = Primary
@@ -146,8 +157,24 @@ fun AuditLogCard(log: AuditLog) {
                 )
             }
             Spacer(modifier = Modifier.height(4.dp))
+            val tableArabic = when (log.tableName.lowercase()) {
+                "customer_numbers" -> "أرقام العملاء"
+                "protection_requests" -> "طلبات الحماية"
+                "protections" -> "سجل الحمايات"
+                "payment_tasks" -> "مهام السداد"
+                "payment_methods" -> "طرق الدفع"
+                "protection_plans" -> "باقات الحماية"
+                "telecom_providers" -> "شركات الاتصالات"
+                "telecom_prefixes" -> "بادئات الأرقام"
+                "users" -> "المستخدمين"
+                "system_settings" -> "إعدادات النظام"
+                "task_settings" -> "إعدادات المهام"
+                "notifications" -> "مركز الإشعارات"
+                "audit_logs" -> "سجل العمليات"
+                else -> log.tableName
+            }
             Text(
-                text = "الجدول: ${log.tableName} • المعرف: ${log.recordId?.take(8) ?: "-"}",
+                text = "القسم: $tableArabic • رقم السجل: #${log.recordId?.take(8)?.uppercase() ?: "-"}",
                 fontSize = 12.sp,
                 color = TextSecondary
             )

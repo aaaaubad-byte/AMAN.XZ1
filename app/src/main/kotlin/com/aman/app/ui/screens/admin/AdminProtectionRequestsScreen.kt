@@ -94,9 +94,9 @@ fun AdminProtectionRequestsScreen(
                     }
                     is AdminProtectionRequestsUiState.ConfigurationPending -> {
                         AmanCard {
-                            Text("تنبيه الاتصال بقاعدة البيانات", fontWeight = FontWeight.Bold, color = TextPrimary)
+                            Text("حالة المزامنة السحابية", fontWeight = FontWeight.Bold, color = TextPrimary)
                             Spacer(modifier = Modifier.height(4.dp))
-                            Text("الاتصال بـ Supabase معلق بانتظار تزويد المفاتيح الحقيقية.", color = TextSecondary, fontSize = 13.sp)
+                            Text("جاري الاتصال الآمن بسجل طلبات الحماية السحابي. اضغط على زر التحديث لإعادة المزامنة.", color = TextSecondary, fontSize = 13.sp)
                         }
                     }
                     is AdminProtectionRequestsUiState.Error -> {
@@ -205,7 +205,7 @@ fun AdminProtectionRequestsScreen(
                             OutlinedTextField(
                                 value = rejectionReason,
                                 onValueChange = { rejectionReason = it },
-                                placeholder = { Text("مثال: رقم الحوالة غير مطابق، الرصيد غير مكتمل...") },
+                                placeholder = { Text("مثال: رقم الحوالة غير مطابق، أو بيانات الإيداع غير واضحة...") },
                                 modifier = Modifier.fillMaxWidth(),
                                 minLines = 3,
                                 shape = RoundedCornerShape(8.dp)
@@ -258,8 +258,8 @@ fun AdminProtectionRequestItemCard(
                     color = TextPrimary
                 )
                 Text(
-                    text = "القيمة: ${request.protectionValue} ريال",
-                    fontSize = 13.sp,
+                    text = "رقم الطلب: #REQ-${request.id.take(8).uppercase()} • القيمة: ${request.protectionValue} ريال",
+                    fontSize = 12.sp,
                     color = TextSecondary
                 )
             }

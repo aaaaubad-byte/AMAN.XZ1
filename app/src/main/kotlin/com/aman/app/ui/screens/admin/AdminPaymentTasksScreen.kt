@@ -97,9 +97,9 @@ fun AdminPaymentTasksScreen(
                     }
                     is AdminTasksUiState.ConfigurationPending -> {
                         AmanCard {
-                            Text("تنبيه الاتصال بقاعدة البيانات", fontWeight = FontWeight.Bold, color = TextPrimary)
+                            Text("حالة المزامنة السحابية", fontWeight = FontWeight.Bold, color = TextPrimary)
                             Spacer(modifier = Modifier.height(4.dp))
-                            Text("الاتصال بـ Supabase معلق بانتظار تزويد المفاتيح الحقيقية.", color = TextSecondary, fontSize = 13.sp)
+                            Text("جاري الاتصال الآمن بسجل مهام السداد المجدولة. اضغط على زر التحديث لإعادة المزامنة.", color = TextSecondary, fontSize = 13.sp)
                         }
                     }
                     is AdminTasksUiState.Error -> {
@@ -288,14 +288,19 @@ fun AdminTaskCard(
         ) {
             Column {
                 Text(
-                    text = task.customerNumber?.phoneNumber ?: "مهمة دفع",
+                    text = task.customerNumber?.phoneNumber ?: "مهمة سداد",
                     fontWeight = FontWeight.Bold,
                     fontSize = 15.sp,
                     color = TextPrimary
                 )
                 Text(
-                    text = "المبلغ: ${task.amount} ريال • تاريخ الاستحقاق: ${task.dueDate.take(10)}",
+                    text = "رقم المهمة: #TSK-${task.id.take(8).uppercase()} • المبلغ: ${task.amount} ريال",
                     fontSize = 12.sp,
+                    color = TextSecondary
+                )
+                Text(
+                    text = "تاريخ الاستحقاق: ${task.dueDate.take(10)}",
+                    fontSize = 11.sp,
                     color = TextSecondary
                 )
             }

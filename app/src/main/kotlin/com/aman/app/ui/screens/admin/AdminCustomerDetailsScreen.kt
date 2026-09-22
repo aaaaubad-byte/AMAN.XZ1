@@ -89,8 +89,8 @@ fun AdminCustomerDetailsScreen(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
-                                    Text("معرف العميل:", fontSize = 12.sp, color = TextSecondary)
-                                    Text(user.id.take(12) + "...", fontSize = 12.sp, color = TextPrimary, fontWeight = FontWeight.Medium)
+                                    Text("رقم العضوية:", fontSize = 12.sp, color = TextSecondary)
+                                    Text("#AM-${user.id.take(8).uppercase()}", fontSize = 12.sp, color = TextPrimary, fontWeight = FontWeight.Bold)
                                 }
                             }
                         }

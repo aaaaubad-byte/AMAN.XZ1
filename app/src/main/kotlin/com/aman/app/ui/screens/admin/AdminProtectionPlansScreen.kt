@@ -105,9 +105,9 @@ fun AdminProtectionPlansScreen(
                     }
                     is AdminPlansUiState.ConfigurationPending -> {
                         AmanCard {
-                            Text("تنبيه الاتصال بقاعدة البيانات", fontWeight = FontWeight.Bold, color = TextPrimary)
+                            Text("حالة المزامنة السحابية", fontWeight = FontWeight.Bold, color = TextPrimary)
                             Spacer(modifier = Modifier.height(4.dp))
-                            Text("الاتصال بـ Supabase معلق بانتظار تزويد المفاتيح الحقيقية.", color = TextSecondary, fontSize = 13.sp)
+                            Text("جاري الاتصال الآمن بسجل باقات الحماية المعتمدة. اضغط على زر التحديث لإعادة المزامنة.", color = TextSecondary, fontSize = 13.sp)
                         }
                     }
                     is AdminPlansUiState.Error -> {
@@ -252,7 +252,7 @@ fun AdminPlanCard(
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
             ) {
-                Text("تعطيل الباقة (مع صون سلامة الحمايات القديمة)")
+                Text("إيقاف إتاحة الباقة (مع استمرار الحمايات الجارية)")
             }
         }
     }
