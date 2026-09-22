@@ -571,19 +571,20 @@ class AdminRepositoryImpl : AdminRepository {
     override suspend fun updateSystemSettings(settings: SystemSettings): AmanResult<SystemSettings> {
         if (!AmanSupabase.isConfigured()) return AmanResult.Error(AmanError.ConfigurationError("Supabase غير مهيأ"))
         return try {
-            val updated = AmanSupabase.postgrest.from("system_settings")
-                .update(
-                    mapOf(
-                        "app_name" to settings.appName,
-                        "support_contact" to settings.contactInfo,
-                        "terms_conditions" to settings.termsAndConditions,
-                        "privacy_policy" to settings.privacyPolicy,
-                        "renewal_warning_days" to settings.renewalWarningDays
-                    )
-                ) {
-                    filter { eq("id", settings.id) }
-                    select()
-                }.decodeSingle<SystemSettings>()
+            val contactJson = buildJsonObject {
+                put("info", settings.contactData ?: settings.contactInfo ?: "")
+            }
+            val params = buildJsonObject {
+                put("p_app_name", settings.appName)
+                put("p_contact_data", contactJson)
+                put("p_terms_and_conditions", settings.termsAndConditions)
+                put("p_privacy_policy", settings.privacyPolicy)
+                put("p_renewal_threshold_days", settings.renewalThresholdDays)
+            }
+            val updated = AmanSupabase.postgrest.rpc(
+                function = "admin_update_system_settings",
+                parameters = params
+            ).decodeAs<SystemSettings>()
             AmanResult.Success(updated)
         } catch (e: Exception) {
             AmanResult.Error(AmanError.DatabaseError("تعذر حفظ إعدادات النظام: ${e.message}", cause = e))

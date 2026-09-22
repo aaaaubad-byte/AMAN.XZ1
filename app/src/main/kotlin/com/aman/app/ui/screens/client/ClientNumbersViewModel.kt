@@ -43,7 +43,6 @@ class ClientNumbersViewModel(
             _listState.value = NumbersListUiState.Success(emptyList())
             return
         }
-
         _listState.value = NumbersListUiState.Loading
         viewModelScope.launch {
             when (val res = numberRepo.getNumbersByCustomer(customerId)) {
@@ -58,15 +57,14 @@ class ClientNumbersViewModel(
     }
 
     /**
-     * كشف مزود الخدمة تلقائياً بمجرد كتابة أول رقمين أو 3 أرقام
-     * The customer must NOT manually select the telecom provider.
+     * كشف مزود الخدمة تلقائياً عبر قاعدة البيانات بناءً على البادئة المدخلة.
+     * مزود الخدمة يُحدد حصراً عبر قاعدة بيانات V7 ولا يتم اختياره يدوياً من العميل.
      */
     fun onPhoneNumberChanged(input: String) {
         val cleanNumber = input.filter { it.isDigit() }
         if (cleanNumber.length >= 2) {
-            val prefix = cleanNumber.take(2)
             viewModelScope.launch {
-                when (val res = numberRepo.detectProviderFromPrefix(prefix)) {
+                when (val res = numberRepo.detectProviderFromPrefix(cleanNumber)) {
                     is AmanResult.Success -> {
                         _detectedProvider.value = res.data
                     }
@@ -82,15 +80,8 @@ class ClientNumbersViewModel(
 
     fun submitNewNumber(phoneNumber: String) {
         val cleanNumber = phoneNumber.filter { it.isDigit() }
-        if (cleanNumber.length != 9) {
-            _addState.value = AddNumberUiState.Error("يجب أن يتكون رقم الهاتف من 9 أرقام (مثال: 771234567)")
-            return
-        }
-
-        val prefix = cleanNumber.take(2)
-        val validPrefixes = listOf("77", "78", "73", "71", "70")
-        if (prefix !in validPrefixes) {
-            _addState.value = AddNumberUiState.Error("البادئة غير صالحة. البادئات المعتمدة في اليمن: 77, 78, 73, 71, 70")
+        if (cleanNumber.isBlank()) {
+            _addState.value = AddNumberUiState.Error("يرجى إدخال رقم الهاتف")
             return
         }
 

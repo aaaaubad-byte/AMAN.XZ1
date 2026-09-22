@@ -9,16 +9,18 @@ import io.github.jan.supabase.gotrue.SessionStatus
 import io.github.jan.supabase.gotrue.auth
 import io.github.jan.supabase.gotrue.providers.builtin.Email
 import io.github.jan.supabase.postgrest.from
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 
 /**
  * Authentication Repository for AMAN | أمان.
- * Follows the authoritative specifications in AMAN.XZ.txt:
- * - Authentication via Email & Password
- * - No phone OTP
- * - Users table mapping
- * - Real Supabase Auth interaction
+ * Aligned with V7 database schema:
+ * - Direct insert/upsert into users table is FORBIDDEN.
+ * - Trigger public.handle_new_auth_user() creates the public.users record on auth.users creation.
+ * - User metadata (name) is passed in raw_user_meta_data.
  */
 interface AuthRepositoryContract {
     val sessionStatus: Flow<SessionStatus>
@@ -50,6 +52,7 @@ class AuthRepository : AuthRepositoryContract {
                 this.email = email.trim()
                 this.password = pass
             }
+
             val currentUser = AmanSupabase.auth.currentUserOrNull()
                 ?: return AmanResult.Error(AmanError.AuthenticationError("لم يتم العثور على بيانات المستخدم بعد الدخول"))
 
@@ -75,26 +78,43 @@ class AuthRepository : AuthRepositoryContract {
         }
 
         return try {
+            // Sign up passing name in user metadata so trigger public.handle_new_auth_user() can use it
             AmanSupabase.auth.signUpWith(Email) {
                 this.email = email.trim()
                 this.password = pass
+                this.data = buildJsonObject {
+                    put("name", name.trim())
+                    put("full_name", name.trim())
+                }
             }
 
             val currentUser = AmanSupabase.auth.currentUserOrNull()
                 ?: return AmanResult.Error(AmanError.AuthenticationError("فشل إنشاء حساب المصادقة"))
 
-            val newUser = AppUser(
+            // Allow the trigger handle_new_auth_user() to execute and populate public.users
+            var userRecord: AppUser? = null
+            for (attempt in 1..4) {
+                delay(300L * attempt)
+                userRecord = try {
+                    AmanSupabase.postgrest.from("users")
+                        .select {
+                            filter { eq("id", currentUser.id) }
+                        }.decodeSingleOrNull<AppUser>()
+                } catch (_: Exception) {
+                    null
+                }
+                if (userRecord != null) break
+            }
+
+            val finalUser = userRecord ?: AppUser(
                 id = currentUser.id,
                 name = name.trim(),
                 email = email.trim(),
-                role = UserRole.CLIENT,
+                role = UserRole.CUSTOMER,
                 accountStatus = "active"
             )
 
-            // Insert into users table
-            AmanSupabase.postgrest.from("users").upsert(newUser)
-
-            AmanResult.Success(newUser)
+            AmanResult.Success(finalUser)
         } catch (e: Exception) {
             AmanResult.Error(AmanError.AuthenticationError("فشل إنشاء الحساب: ${e.message}", e))
         }

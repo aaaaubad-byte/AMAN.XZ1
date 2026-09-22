@@ -5,20 +5,20 @@ import kotlinx.serialization.Serializable
 
 /**
  * Domain & Data Models for AMAN | أمان
- * Defined strictly according to the authoritative reference document "AMAN.XZ.txt".
+ * Defined strictly according to the authoritative V7 database schema.
  */
 
 // ---------------------------------------------------------------------------
 // 1. المستخدمون والعملاء (Users / Customers)
 // ---------------------------------------------------------------------------
+
 @Serializable
 enum class UserRole {
-    @SerialName("client") CLIENT,
-    @SerialName("manager") MANAGER,
-    @SerialName("admin") ADMIN;
+    @SerialName("customer") CUSTOMER,
+    @SerialName("manager") MANAGER;
 
     val isManagerOrAdmin: Boolean
-        get() = this == MANAGER || this == ADMIN
+        get() = this == MANAGER
 }
 
 @Serializable
@@ -26,7 +26,7 @@ data class AppUser(
     val id: String,
     val name: String,
     val email: String,
-    val role: UserRole = UserRole.CLIENT,
+    val role: UserRole = UserRole.CUSTOMER,
     @SerialName("account_status") val accountStatus: String = "active",
     @SerialName("created_at") val createdAt: String? = null,
     @SerialName("updated_at") val updatedAt: String? = null
@@ -35,6 +35,7 @@ data class AppUser(
 // ---------------------------------------------------------------------------
 // 2. شركات الاتصالات والبادئات (Telecom Providers & Prefixes)
 // ---------------------------------------------------------------------------
+
 @Serializable
 data class TelecomProvider(
     val id: String,
@@ -42,7 +43,7 @@ data class TelecomProvider(
     val code: String,
     @SerialName("number_length") val numberLength: Int = 9,
     @SerialName("is_active") val isActive: Boolean = true,
-    @SerialName("is_visible_to_customer") val isVisibleToCustomer: Boolean = true,
+    @SerialName("is_visible_to_customers") val isVisibleToCustomer: Boolean = true,
     @SerialName("display_order") val displayOrder: Int = 0,
     @SerialName("created_at") val createdAt: String? = null
 )
@@ -58,6 +59,7 @@ data class TelecomPrefix(
 // ---------------------------------------------------------------------------
 // 3. أرقام العملاء (Customer Numbers)
 // ---------------------------------------------------------------------------
+
 @Serializable
 enum class CustomerNumberStatus {
     @SerialName("active") ACTIVE,
@@ -89,6 +91,7 @@ data class CustomerNumber(
 // ---------------------------------------------------------------------------
 // 4. باقات الحماية (Protection Plans)
 // ---------------------------------------------------------------------------
+
 @Serializable
 data class ProtectionPlan(
     val id: String,
@@ -97,26 +100,32 @@ data class ProtectionPlan(
     val price: Double,
     @SerialName("duration_days") val durationDays: Int,
     @SerialName("is_active") val isActive: Boolean = true,
-    @SerialName("is_visible_to_customer") val isVisibleToCustomer: Boolean = true,
+    @SerialName("is_visible_to_customers") val isVisibleToCustomer: Boolean = true,
     @SerialName("created_at") val createdAt: String? = null
 )
 
 // ---------------------------------------------------------------------------
 // 5. طرق الدفع (Payment Methods)
 // ---------------------------------------------------------------------------
+
 @Serializable
 data class PaymentMethod(
     val id: String,
-    @SerialName("wallet_name") val walletName: String,
+    val name: String,
     @SerialName("account_number") val accountNumber: String,
     @SerialName("account_holder_name") val accountHolderName: String,
-    @SerialName("payment_instructions") val paymentInstructions: String? = null,
+    val instructions: String? = null,
     @SerialName("is_active") val isActive: Boolean = true
-)
+) {
+    // Backwards compatibility accessor
+    val walletName: String get() = name
+    val paymentInstructions: String? get() = instructions
+}
 
 // ---------------------------------------------------------------------------
 // 6. طلبات الحماية (Protection Requests)
 // ---------------------------------------------------------------------------
+
 @Serializable
 enum class ProtectionRequestStatus {
     @SerialName("pending") PENDING,
@@ -133,10 +142,10 @@ data class ProtectionRequest(
     @SerialName("plan_id") val planId: String,
     @SerialName("payment_method_id") val paymentMethodId: String,
     @SerialName("protection_value") val protectionValue: Double,
-    @SerialName("transfer_reference") val transferData: String? = null,
+    @SerialName("transfer_data") val transferData: String? = null,
     val status: ProtectionRequestStatus = ProtectionRequestStatus.PENDING,
     @SerialName("rejection_reason") val rejectionReason: String? = null,
-    @SerialName("reviewing_manager_id") val reviewedBy: String? = null,
+    @SerialName("reviewed_by") val reviewedBy: String? = null,
     @SerialName("reviewed_at") val reviewedAt: String? = null,
     @SerialName("created_at") val createdAt: String? = null,
     // Expanded relations
@@ -149,6 +158,7 @@ data class ProtectionRequest(
 // ---------------------------------------------------------------------------
 // 7. الحمايات (Protections)
 // ---------------------------------------------------------------------------
+
 @Serializable
 enum class StoredProtectionStatus {
     @SerialName("active") ACTIVE,
@@ -170,8 +180,6 @@ data class Protection(
     @SerialName("provider_id") val providerId: String,
     @SerialName("plan_id") val planId: String,
     @SerialName("created_from_request_id") val createdFromRequestId: String? = null,
-    @SerialName("protection_value_at_purchase") val priceAtPurchase: Double,
-    @SerialName("duration_days_at_purchase") val durationAtPurchase: Int,
     @SerialName("start_date") val startDate: String,
     @SerialName("end_date") val endDate: String,
     val status: StoredProtectionStatus = StoredProtectionStatus.ACTIVE,
@@ -181,6 +189,9 @@ data class Protection(
     @SerialName("plan") val plan: ProtectionPlan? = null,
     @SerialName("provider") val provider: TelecomProvider? = null
 ) {
+    // Backwards compatibility accessor for UI screens
+    val priceAtPurchase: Double get() = plan?.price ?: 0.0
+
     /**
      * حساب الأيام المتبقية حتى تاريخ الانتهاء
      */
@@ -221,6 +232,7 @@ data class Protection(
 // ---------------------------------------------------------------------------
 // 8. المهام (Payment Tasks)
 // ---------------------------------------------------------------------------
+
 @Serializable
 enum class TaskType {
     @SerialName("first") FIRST,
@@ -245,8 +257,8 @@ data class PaymentTask(
     val amount: Double,
     @SerialName("due_date") val dueDate: String,
     val status: TaskStatus = TaskStatus.UPCOMING,
-    @SerialName("completion_date") val completedAt: String? = null,
-    @SerialName("completed_by_manager_id") val completedBy: String? = null,
+    @SerialName("completed_at") val completedAt: String? = null,
+    @SerialName("completed_by") val completedBy: String? = null,
     @SerialName("previous_due_date") val previousDueDate: String? = null,
     @SerialName("reschedule_reason") val rescheduleReason: String? = null,
     @SerialName("cancellation_reason") val cancellationReason: String? = null,
@@ -257,6 +269,7 @@ data class PaymentTask(
 // ---------------------------------------------------------------------------
 // 9. إعدادات المهام (Task Settings)
 // ---------------------------------------------------------------------------
+
 @Serializable
 data class TaskSettings(
     val id: String,
@@ -273,6 +286,7 @@ data class TaskSettings(
 // ---------------------------------------------------------------------------
 // 10. الإشعارات (Notifications)
 // ---------------------------------------------------------------------------
+
 @Serializable
 data class AppNotification(
     val id: String,
@@ -288,14 +302,15 @@ data class AppNotification(
 // ---------------------------------------------------------------------------
 // 11. سجل العمليات (Audit Logs)
 // ---------------------------------------------------------------------------
+
 @Serializable
 data class AuditLog(
     val id: String,
     @SerialName("actor_id") val actorId: String? = null,
-    @SerialName("operation_type") val actionType: String,
+    @SerialName("action_type") val actionType: String,
     @SerialName("affected_record_id") val affectedRecord: String? = null,
     @SerialName("affected_table") val affectedTable: String? = null,
-    @SerialName("operation_details") val details: String? = null,
+    val details: String? = null,
     @SerialName("previous_data") val previousData: String? = null,
     @SerialName("new_data") val newData: String? = null,
     @SerialName("created_at") val createdAt: String? = null
@@ -304,19 +319,26 @@ data class AuditLog(
 // ---------------------------------------------------------------------------
 // 12. إعدادات النظام (System Settings)
 // ---------------------------------------------------------------------------
+
 @Serializable
 data class SystemSettings(
-    val id: String = "",
-    @SerialName("app_name") val appName: String = "AMAN | أمان",
-    @SerialName("support_contact") val contactInfo: String? = null,
-    @SerialName("terms_conditions") val termsAndConditions: String? = null,
+    val id: Boolean = true,
+    @SerialName("app_name") val appName: String = "AMAN",
+    @SerialName("contact_data") val contactData: String? = null,
+    @SerialName("terms_and_conditions") val termsAndConditions: String? = null,
     @SerialName("privacy_policy") val privacyPolicy: String? = null,
-    @SerialName("renewal_warning_days") val renewalWarningDays: Int = 7
-)
+    @SerialName("renewal_threshold_days") val renewalThresholdDays: Int = 30,
+    @SerialName("updated_at") val updatedAt: String? = null
+) {
+    // Backwards compatibility accessor for UI screens
+    val contactInfo: String? get() = contactData
+    val renewalWarningDays: Int get() = renewalThresholdDays
+}
 
 // ---------------------------------------------------------------------------
-// 13. نماذج الإدارة (Administration Models - Stage 4)
+// 13. نماذج الإدارة (Administration Models)
 // ---------------------------------------------------------------------------
+
 @Serializable
 data class AdminDashboardMetrics(
     val customerCount: Int = 0,
@@ -337,4 +359,3 @@ data class CustomerDetails(
     val requests: List<ProtectionRequest> = emptyList(),
     val protections: List<Protection> = emptyList()
 )
-
