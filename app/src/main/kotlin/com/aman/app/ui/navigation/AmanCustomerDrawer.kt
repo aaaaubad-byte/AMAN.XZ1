@@ -55,7 +55,7 @@ fun AmanCustomerDrawerContent(
     )
 
     ModalDrawerSheet(
-        modifier = modifier.width(310.dp),
+        modifier = modifier.fillMaxWidth(0.80f),
         drawerContainerColor = SurfaceWhite,
         drawerShape = RoundedCornerShape(topEnd = 0.dp, bottomEnd = 0.dp)
     ) {

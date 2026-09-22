@@ -100,7 +100,7 @@ fun AdminDrawerContent(
     )
 
     ModalDrawerSheet(
-        modifier = Modifier.width(310.dp),
+        modifier = Modifier.fillMaxWidth(0.80f),
         drawerContainerColor = SurfaceWhite
     ) {
         Column(

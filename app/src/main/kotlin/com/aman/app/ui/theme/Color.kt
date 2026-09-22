@@ -11,6 +11,7 @@ val Accent = Color(0xFF6EE7B7)
 val LightTeal = Color(0xFFE9F8F5)
 
 val BackgroundLight = Color(0xFFF7FAF9)
+val BackgroundMuted = Color(0xFFF7FAF9)
 val SurfaceWhite = Color(0xFFFFFFFF)
 
 val TextPrimary = Color(0xFF18302D)
