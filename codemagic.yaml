@@ -1,6 +1,6 @@
 workflows:
   android:
-    name: AMAN Android
+    name: AMAN Native Android
     instance_type: mac_mini_m2
 
     environment:
@@ -11,42 +11,19 @@ workflows:
         script: |
           echo "sdk.dir=$ANDROID_SDK_ROOT" > "$CM_BUILD_DIR/local.properties"
 
-      - name: Install dependencies
+      - name: Verify Android project
         script: |
-          npm install --legacy-peer-deps
+          echo "=== Project structure ==="
+          ls -la
+          echo "=== App module ==="
+          ls -la app
+          echo "=== Gradle wrapper ==="
+          ls -la gradlew
 
-      - name: Install Capacitor
+      - name: Build native Android APK
         script: |
-          npm install --save-dev @capacitor/cli @capacitor/core @capacitor/android --legacy-peer-deps
-
-      - name: Build web application
-        script: |
-          npm run build
-
-      - name: Create Capacitor configuration
-        script: |
-          cat > capacitor.config.json <<'EOF'
-          {
-            "appId": "com.aman.app",
-            "appName": "أمان",
-            "webDir": "dist"
-          }
-          EOF
-
-      - name: Add Android platform if missing
-        script: |
-          if [ ! -d "android" ]; then
-            npx cap add android
-          fi
-
-      - name: Sync Capacitor
-        script: |
-          npx cap sync android
-
-      - name: Build APK
-        script: |
-          cd android
-          ./gradlew assembleDebug --no-daemon --stacktrace
+          chmod +x ./gradlew
+          ./gradlew :app:assembleDebug --no-daemon --stacktrace
 
     artifacts:
-      - android/app/build/outputs/apk/debug/*.apk
+      - app/build/outputs/apk/debug/*.apk
