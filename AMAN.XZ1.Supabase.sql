@@ -77,56 +77,7 @@ EXCEPTION
 END $$;
 
 -- ------------------------------------------------------------------------------
--- 03. CORE HELPER FUNCTIONS (Foundational Authentication & Data Utilities)
--- ------------------------------------------------------------------------------
-
--- Helper 1: Verify Manager or Administrator Role via Supabase Auth
-CREATE OR REPLACE FUNCTION is_manager(p_user_id UUID DEFAULT auth.uid())
-RETURNS BOOLEAN
-LANGUAGE sql
-STABLE
-SECURITY DEFINER
-SET search_path = public
-AS $$
-    SELECT EXISTS (
-        SELECT 1 FROM users 
-        WHERE id = p_user_id 
-          AND role IN ('manager', 'admin')
-          AND account_status = 'active'
-    );
-$$;
-
--- Helper 2: Standardize Yemen Phone Number to National 9 Digits
-CREATE OR REPLACE FUNCTION normalize_phone_number(p_raw_phone TEXT)
-RETURNS TEXT
-LANGUAGE plpgsql
-IMMUTABLE
-AS $$
-DECLARE
-    v_clean TEXT;
-BEGIN
-    v_clean := regexp_replace(coalesce(p_raw_phone, ''), '\s+', '', 'g');
-    
-    -- Strip country prefix
-    IF v_clean LIKE '+967%' THEN
-        v_clean := substring(v_clean FROM 5);
-    ELSIF v_clean LIKE '00967%' THEN
-        v_clean := substring(v_clean FROM 6);
-    ELSIF v_clean LIKE '967%' AND length(v_clean) > 9 THEN
-        v_clean := substring(v_clean FROM 4);
-    END IF;
-
-    -- Strip leading zero if present
-    IF v_clean LIKE '0%' AND length(v_clean) > 9 THEN
-        v_clean := substring(v_clean FROM 2);
-    END IF;
-
-    RETURN v_clean;
-END;
-$$;
-
--- ------------------------------------------------------------------------------
--- 04. CORE TABLES AND CONSTRAINTS (13 Relational Tables)
+-- 03. CORE TABLES AND CONSTRAINTS (13 Relational Tables)
 -- ------------------------------------------------------------------------------
 
 -- Table 1: users (المستخدمون / العملاء والمدراء)
@@ -308,6 +259,57 @@ CREATE TABLE IF NOT EXISTS system_settings (
     renewal_warning_days INT NOT NULL DEFAULT 7 CHECK (renewal_warning_days > 0),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- ------------------------------------------------------------------------------
+-- 04. CORE HELPER FUNCTIONS (Foundational Authentication & Data Utilities)
+-- ------------------------------------------------------------------------------
+
+-- Helper 1: Verify Manager or Administrator Role via Supabase Auth
+CREATE OR REPLACE FUNCTION is_manager(p_user_id UUID DEFAULT auth.uid())
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+    RETURN EXISTS (
+        SELECT 1 FROM users 
+        WHERE id = p_user_id 
+          AND role IN ('manager', 'admin')
+          AND account_status = 'active'
+    );
+END;
+$$;
+
+-- Helper 2: Standardize Yemen Phone Number to National 9 Digits
+CREATE OR REPLACE FUNCTION normalize_phone_number(p_raw_phone TEXT)
+RETURNS TEXT
+LANGUAGE plpgsql
+IMMUTABLE
+AS $$
+DECLARE
+    v_clean TEXT;
+BEGIN
+    v_clean := regexp_replace(coalesce(p_raw_phone, ''), '\s+', '', 'g');
+    
+    -- Strip country prefix
+    IF v_clean LIKE '+967%' THEN
+        v_clean := substring(v_clean FROM 5);
+    ELSIF v_clean LIKE '00967%' THEN
+        v_clean := substring(v_clean FROM 6);
+    ELSIF v_clean LIKE '967%' AND length(v_clean) > 9 THEN
+        v_clean := substring(v_clean FROM 4);
+    END IF;
+
+    -- Strip leading zero if present
+    IF v_clean LIKE '0%' AND length(v_clean) > 9 THEN
+        v_clean := substring(v_clean FROM 2);
+    END IF;
+
+    RETURN v_clean;
+END;
+$$;
 
 -- ------------------------------------------------------------------------------
 -- 05. INDEXES & CONCURRENCY-SAFE CONSTRAINTS
