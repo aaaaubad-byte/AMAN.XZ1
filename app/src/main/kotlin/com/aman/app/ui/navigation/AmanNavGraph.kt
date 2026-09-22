@@ -361,6 +361,20 @@ fun AmanNavGraph(
                     )
                 }
 
+                composable(Screen.AdminCustomerNumbers.route) {
+                    AdminCustomerNumbersScreen(
+                        onNavigate = { route -> navController.navigate(route) },
+                        onLogout = {
+                            authViewModel.signOut {
+                                currentUser = null
+                                navController.navigate(Screen.Login.route) {
+                                    popUpTo(0) { inclusive = true }
+                                }
+                            }
+                        }
+                    )
+                }
+
                 composable(
                     route = Screen.AdminCustomerDetails.route,
                     arguments = listOf(
@@ -446,6 +460,20 @@ fun AmanNavGraph(
 
                 composable(Screen.AdminPaymentTasks.route) {
                     AdminPaymentTasksScreen(
+                        onNavigate = { route -> navController.navigate(route) },
+                        onLogout = {
+                            authViewModel.signOut {
+                                currentUser = null
+                                navController.navigate(Screen.Login.route) {
+                                    popUpTo(0) { inclusive = true }
+                                }
+                            }
+                        }
+                    )
+                }
+
+                composable(Screen.AdminNotifications.route) {
+                    AdminNotificationsScreen(
                         onNavigate = { route -> navController.navigate(route) },
                         onLogout = {
                             authViewModel.signOut {

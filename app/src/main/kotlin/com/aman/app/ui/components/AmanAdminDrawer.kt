@@ -86,6 +86,7 @@ fun AdminDrawerContent(
     val items = listOf(
         AdminDrawerItem("لوحة الإدارة الرئيسية", Icons.Default.Dashboard, Screen.AdminDashboard.route),
         AdminDrawerItem("العملاء", Icons.Default.People, Screen.AdminCustomers.route),
+        AdminDrawerItem("أرقام العملاء", Icons.Default.PhoneAndroid, Screen.AdminCustomerNumbers.route),
         AdminDrawerItem("طلبات الحماية", Icons.Default.Assignment, Screen.AdminProtectionRequests.route),
         AdminDrawerItem("الحمايات النشطة والمنتهية", Icons.Default.Shield, Screen.AdminProtections.route),
         AdminDrawerItem("شركات الاتصالات", Icons.Default.CellTower, Screen.AdminTelecomProviders.route),
@@ -93,6 +94,7 @@ fun AdminDrawerContent(
         AdminDrawerItem("طرق الدفع", Icons.Default.AccountBalanceWallet, Screen.AdminPaymentMethods.route),
         AdminDrawerItem("مهام الدفع", Icons.Default.Checklist, Screen.AdminPaymentTasks.route),
         AdminDrawerItem("إعدادات المهام", Icons.Default.Tune, Screen.AdminTaskSettings.route),
+        AdminDrawerItem("الإشعارات", Icons.Default.Notifications, Screen.AdminNotifications.route),
         AdminDrawerItem("إعدادات النظام", Icons.Default.Settings, Screen.AdminSystemSettings.route),
         AdminDrawerItem("سجل العمليات والتدقيق", Icons.Default.History, Screen.AdminAuditLogs.route)
     )

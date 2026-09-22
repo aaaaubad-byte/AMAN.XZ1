@@ -67,6 +67,12 @@ interface AdminRepository {
 
     // 11. Audit Logs
     suspend fun getAuditLogs(): AmanResult<List<AuditLog>>
+
+    // 12. Customer Numbers (Admin Management)
+    suspend fun getAllCustomerNumbers(): AmanResult<List<CustomerNumber>>
+
+    // 13. System Notifications (Admin Overview)
+    suspend fun getAllNotifications(): AmanResult<List<AppNotification>>
 }
 
 class AdminRepositoryImpl : AdminRepository {
@@ -594,6 +600,36 @@ class AdminRepositoryImpl : AdminRepository {
             AmanResult.Success(list)
         } catch (e: Exception) {
             AmanResult.Error(AmanError.DatabaseError("تعذر جلب سجل التدقيق: ${e.message}", cause = e))
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // 12. أرقام العملاء (Customer Numbers Overview)
+    // -----------------------------------------------------------------------
+    override suspend fun getAllCustomerNumbers(): AmanResult<List<CustomerNumber>> {
+        if (!AmanSupabase.isConfigured()) return AmanResult.Error(AmanError.ConfigurationError("Supabase غير مهيأ"))
+        return try {
+            val numbers = AmanSupabase.postgrest.from("customer_numbers")
+                .select()
+                .decodeList<CustomerNumber>()
+            AmanResult.Success(numbers)
+        } catch (e: Exception) {
+            AmanResult.Error(AmanError.DatabaseError("تعذر جلب أرقام العملاء: ${e.message}", cause = e))
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // 13. الإشعارات (All Notifications Overview)
+    // -----------------------------------------------------------------------
+    override suspend fun getAllNotifications(): AmanResult<List<AppNotification>> {
+        if (!AmanSupabase.isConfigured()) return AmanResult.Error(AmanError.ConfigurationError("Supabase غير مهيأ"))
+        return try {
+            val notifications = AmanSupabase.postgrest.from("notifications")
+                .select()
+                .decodeList<AppNotification>()
+            AmanResult.Success(notifications)
+        } catch (e: Exception) {
+            AmanResult.Error(AmanError.DatabaseError("تعذر جلب الإشعارات: ${e.message}", cause = e))
         }
     }
 }

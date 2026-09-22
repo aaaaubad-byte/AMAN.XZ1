@@ -20,6 +20,7 @@ sealed class Screen(val route: String) {
     // Administration Screens (Stage 4)
     object AdminDashboard : Screen("admin_dashboard")
     object AdminCustomers : Screen("admin_customers")
+    object AdminCustomerNumbers : Screen("admin_customer_numbers")
     object AdminCustomerDetails : Screen("admin_customers/{customerId}") {
         fun createRoute(customerId: String) = "admin_customers/$customerId"
     }
@@ -29,6 +30,7 @@ sealed class Screen(val route: String) {
     object AdminProtectionPlans : Screen("admin_protection_plans")
     object AdminPaymentMethods : Screen("admin_payment_methods")
     object AdminPaymentTasks : Screen("admin_payment_tasks")
+    object AdminNotifications : Screen("admin_notifications")
     object AdminTaskSettings : Screen("admin_task_settings")
     object AdminSystemSettings : Screen("admin_system_settings")
     object AdminAuditLogs : Screen("admin_audit_logs")
