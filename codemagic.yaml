@@ -1,110 +1,32 @@
-
-Save changes
-In order to save the changes made to your configuration file, you will need to update the codemagic.yaml file in your repository.
-Step 1 - Copy or download the changes
-
-Copy to clipboard
-or
-
-Download edited file
-
-
-
-Next: Commit changes
-A
-Personal Account
-A
-Applications
-Builds
-OTA Updates
-NEW
-App Preview
-Settings
-Billing
-
-
-AMAN.XZ1
-AMAN.XZ1
-github.com/aaaaubad-byte/AMAN.XZ1
-
-Discard
-
-Save changes
-codemagic.yaml
-Environment variables
-Caching
-Webhooks
-Scheduled builds
-Tester groups
-Signing identities
-Repository settings
-Branch
-
-Branch main codemagic.yaml
-
-
-1
 workflows:
-2
   android:
-3
     name: AMAN Android
-4
     instance_type: mac_mini_m2
-5
-​
-6
-    environment:
-7
-      java: 17
-8
-​
-9
-    scripts:
-10
-      - name: Set Android SDK location
-11
-        script: |
-12
-          echo "sdk.dir=$ANDROID_SDK_ROOT" > "$CM_BUILD_DIR/local.properties"
-13
-​
-14
-      - name: Install dependencies
-15
-        script: |
-16
-          npm ci
-17
-​
-18
-      - name: Build web application
-19
-        script: |
-20
-          npm run build
-21
-​
-22
-      - name: Sync Capacitor
-23
-        script: |
-24
-          npx cap sync android
-25
-​
-26
-      - name: Build APK
-27
-        script: |
-28
-          cd android
-29
-          ./gradlew assembleDebug --no-daemon --stacktrace
-30
-​
-31
-    artifacts:
-32
-      - android/app/build/outputs/apk/debug/*.apk
 
+    environment:
+      java: 17
+
+    scripts:
+      - name: Set Android SDK location
+        script: |
+          echo "sdk.dir=$ANDROID_SDK_ROOT" > "$CM_BUILD_DIR/local.properties"
+
+      - name: Install dependencies
+        script: |
+          npm ci
+
+      - name: Build web application
+        script: |
+          npm run build
+
+      - name: Sync Capacitor
+        script: |
+          npx cap sync android
+
+      - name: Build APK
+        script: |
+          cd android
+          ./gradlew assembleDebug --no-daemon --stacktrace
+
+    artifacts:
+      - android/app/build/outputs/apk/debug/*.apk
