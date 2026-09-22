@@ -103,4 +103,32 @@ class AuthViewModel(
     fun resetError() {
         _uiState.value = AuthUiState.Idle
     }
+
+    fun restoreSession(onResult: (AppUser?) -> Unit) {
+        viewModelScope.launch {
+            when (val result = authRepository.getCurrentUser()) {
+                is AmanResult.Success -> {
+                    if (result.data != null) {
+                        _uiState.value = AuthUiState.Authenticated(result.data)
+                        onResult(result.data)
+                    } else {
+                        _uiState.value = AuthUiState.Idle
+                        onResult(null)
+                    }
+                }
+                is AmanResult.Error -> {
+                    _uiState.value = AuthUiState.Idle
+                    onResult(null)
+                }
+            }
+        }
+    }
+
+    fun signOut(onComplete: () -> Unit = {}) {
+        viewModelScope.launch {
+            authRepository.signOut()
+            _uiState.value = AuthUiState.Idle
+            onComplete()
+        }
+    }
 }

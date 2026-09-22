@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -22,7 +24,7 @@ android {
         }
 
         // Safe configuration loading: reads local.properties or environment variables
-        val localProps = java.util.Properties().apply {
+        val localProps = Properties().apply {
             val localPropertiesFile = rootProject.file("local.properties")
             if (localPropertiesFile.exists()) {
                 localPropertiesFile.inputStream().use { load(it) }

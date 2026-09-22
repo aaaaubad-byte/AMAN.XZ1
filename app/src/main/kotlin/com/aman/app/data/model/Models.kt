@@ -63,12 +63,20 @@ enum class CustomerNumberStatus {
 }
 
 @Serializable
+enum class NumberProtectionStatus {
+    @SerialName("unprotected") UNPROTECTED,
+    @SerialName("pending") PENDING,
+    @SerialName("protected") PROTECTED
+}
+
+@Serializable
 data class CustomerNumber(
     val id: String,
     @SerialName("customer_id") val customerId: String,
     @SerialName("provider_id") val providerId: String,
     @SerialName("phone_number") val phoneNumber: String,
     val status: CustomerNumberStatus = CustomerNumberStatus.UNPROTECTED,
+    @SerialName("protection_status") val protectionStatus: NumberProtectionStatus = NumberProtectionStatus.UNPROTECTED,
     @SerialName("created_at") val createdAt: String? = null,
     @SerialName("updated_at") val updatedAt: String? = null,
     // Expanded relations
@@ -145,6 +153,13 @@ enum class StoredProtectionStatus {
 }
 
 @Serializable
+enum class ProtectionDisplayStatus {
+    @SerialName("active") ACTIVE,
+    @SerialName("needs_renewal") NEEDS_RENEWAL,
+    @SerialName("expired") EXPIRED
+}
+
+@Serializable
 data class Protection(
     val id: String,
     @SerialName("customer_id") val customerId: String,
@@ -157,15 +172,46 @@ data class Protection(
     @SerialName("start_date") val startDate: String,
     @SerialName("end_date") val endDate: String,
     val status: StoredProtectionStatus = StoredProtectionStatus.ACTIVE,
-    @SerialName("created_at") val createdAt: String? = null
+    @SerialName("created_at") val createdAt: String? = null,
+    // Expanded relations
+    @SerialName("customer_number") val customerNumber: CustomerNumber? = null,
+    @SerialName("plan") val plan: ProtectionPlan? = null,
+    @SerialName("provider") val provider: TelecomProvider? = null
 ) {
     /**
-     * "تحتاج تجديد" حالة محسوبة وليست حالة مخزنة
+     * حساب الأيام المتبقية حتى تاريخ الانتهاء
      */
-    fun isNeedsRenewal(thresholdDays: Int = 7, currentDateIso: String): Boolean {
-        if (status == StoredProtectionStatus.EXPIRED) return false
-        // Calculation performed dynamically by comparing end_date against current date & threshold
-        return false // Will be computed dynamically in domain/use-case layer
+    fun daysRemaining(): Long {
+        return try {
+            val endEpoch = java.time.Instant.parse(
+                if (endDate.endsWith("Z") || endDate.contains("+")) endDate else "${endDate}Z"
+            ).epochSecond
+            val nowEpoch = java.time.Instant.now().epochSecond
+            val diffSec = endEpoch - nowEpoch
+            if (diffSec <= 0) 0L else diffSec / 86400L
+        } catch (_: Exception) {
+            try {
+                val localEnd = java.time.LocalDate.parse(endDate.take(10))
+                val today = java.time.LocalDate.now()
+                val diff = java.time.temporal.ChronoUnit.DAYS.between(today, localEnd)
+                if (diff < 0) 0L else diff
+            } catch (_: Exception) {
+                0L
+            }
+        }
+    }
+
+    /**
+     * "تحتاج تجديد" حالة محسوبة ديناميكياً وليست حالة مخزنة
+     */
+    fun calculateDisplayStatus(thresholdDays: Int = 7): ProtectionDisplayStatus {
+        if (status == StoredProtectionStatus.EXPIRED) return ProtectionDisplayStatus.EXPIRED
+        val remaining = daysRemaining()
+        return when {
+            remaining <= 0 -> ProtectionDisplayStatus.EXPIRED
+            remaining <= thresholdDays -> ProtectionDisplayStatus.NEEDS_RENEWAL
+            else -> ProtectionDisplayStatus.ACTIVE
+        }
     }
 }
 
@@ -254,7 +300,7 @@ data class AuditLog(
 // ---------------------------------------------------------------------------
 @Serializable
 data class SystemSettings(
-    val id: String,
+    val id: String = "",
     @SerialName("app_name") val appName: String = "AMAN | أمان",
     @SerialName("contact_info") val contactInfo: String? = null,
     @SerialName("terms_and_conditions") val termsAndConditions: String? = null,

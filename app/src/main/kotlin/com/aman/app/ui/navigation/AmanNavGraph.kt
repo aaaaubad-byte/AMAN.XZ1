@@ -1,73 +1,322 @@
 package com.aman.app.ui.navigation
 
-import androidx.compose.runtime.Composable
+import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.rememberDrawerState
+import androidx.compose.runtime.*
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import com.aman.app.ui.screens.admin.AdminHomeScreen
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.navArgument
+import com.aman.app.data.model.AppUser
+import com.aman.app.ui.screens.auth.AuthViewModel
 import com.aman.app.ui.screens.auth.LoginScreen
 import com.aman.app.ui.screens.auth.RegisterScreen
-import com.aman.app.ui.screens.client.ClientHomeScreen
+import com.aman.app.ui.screens.client.*
+import com.aman.app.ui.screens.client.info.*
 import com.aman.app.ui.screens.splash.SplashScreen
+import kotlinx.coroutines.launch
 
 @Composable
-fun AmanNavGraph(navController: NavHostController) {
-    NavHost(
-        navController = navController,
-        startDestination = Screen.Splash.route
-    ) {
-        composable(Screen.Splash.route) {
-            SplashScreen(
-                onTimeout = {
-                    navController.navigate(Screen.Login.route) {
-                        popUpTo(Screen.Splash.route) { inclusive = true }
+fun AmanNavGraph(
+    navController: NavHostController,
+    authViewModel: AuthViewModel = viewModel()
+) {
+    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+    val scope = rememberCoroutineScope()
+    var currentUser by remember { mutableStateOf<AppUser?>(null) }
+
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = navBackStackEntry?.destination?.route ?: Screen.Splash.route
+
+    val isTopLevelCustomerRoute = currentRoute in listOf(
+        Screen.ClientHome.route,
+        Screen.MyNumbers.route,
+        Screen.Protections.route,
+        Screen.ProtectionRequests.route
+    )
+
+    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+        ModalNavigationDrawer(
+            drawerState = drawerState,
+            gesturesEnabled = isTopLevelCustomerRoute,
+            drawerContent = {
+                AmanCustomerDrawerContent(
+                    currentRoute = currentRoute,
+                    user = currentUser,
+                    unreadNotificationsCount = 0,
+                    onNavigate = { route ->
+                        scope.launch { drawerState.close() }
+                        if (route != currentRoute) {
+                            navController.navigate(route) {
+                                popUpTo(Screen.ClientHome.route) { saveState = true }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        }
+                    },
+                    onSignOut = {
+                        scope.launch { drawerState.close() }
+                        authViewModel.signOut {
+                            currentUser = null
+                            navController.navigate(Screen.Login.route) {
+                                popUpTo(0) { inclusive = true }
+                            }
+                        }
                     }
+                )
+            }
+        ) {
+            NavHost(
+                navController = navController,
+                startDestination = Screen.Splash.route
+            ) {
+                // 1. Splash Screen & Session Restoration
+                composable(Screen.Splash.route) {
+                    SplashScreen(
+                        onTimeout = {
+                            authViewModel.restoreSession { restoredUser ->
+                                if (restoredUser != null) {
+                                    currentUser = restoredUser
+                                    navController.navigate(Screen.ClientHome.route) {
+                                        popUpTo(Screen.Splash.route) { inclusive = true }
+                                    }
+                                } else {
+                                    navController.navigate(Screen.Login.route) {
+                                        popUpTo(Screen.Splash.route) { inclusive = true }
+                                    }
+                                }
+                            }
+                        }
+                    )
                 }
-            )
-        }
 
-        composable(Screen.Login.route) {
-            LoginScreen(
-                onLoginSuccess = {
-                    navController.navigate(Screen.ClientHome.route) {
-                        popUpTo(Screen.Login.route) { inclusive = true }
-                    }
-                },
-                onNavigateToRegister = {
-                    navController.navigate(Screen.Register.route)
+                // 2. Authentication: Login
+                composable(Screen.Login.route) {
+                    LoginScreen(
+                        viewModel = authViewModel,
+                        onLoginSuccess = {
+                            authViewModel.restoreSession { user ->
+                                currentUser = user
+                                navController.navigate(Screen.ClientHome.route) {
+                                    popUpTo(Screen.Login.route) { inclusive = true }
+                                }
+                            }
+                        },
+                        onNavigateToRegister = {
+                            navController.navigate(Screen.Register.route)
+                        }
+                    )
                 }
-            )
-        }
 
-        composable(Screen.Register.route) {
-            RegisterScreen(
-                onRegisterSuccess = {
-                    navController.navigate(Screen.ClientHome.route) {
-                        popUpTo(Screen.Register.route) { inclusive = true }
-                    }
-                },
-                onNavigateToLogin = {
-                    navController.popBackStack()
+                // 3. Authentication: Register
+                composable(Screen.Register.route) {
+                    RegisterScreen(
+                        viewModel = authViewModel,
+                        onRegisterSuccess = {
+                            authViewModel.restoreSession { user ->
+                                currentUser = user
+                                navController.navigate(Screen.ClientHome.route) {
+                                    popUpTo(Screen.Register.route) { inclusive = true }
+                                }
+                            }
+                        },
+                        onNavigateToLogin = {
+                            navController.popBackStack()
+                        }
+                    )
                 }
-            )
-        }
 
-        composable(Screen.ClientHome.route) {
-            ClientHomeScreen(
-                onNavigateToAddNumber = {},
-                onNavigateToRequests = {},
-                onSwitchToAdmin = {
-                    navController.navigate(Screen.AdminDashboard.route)
+                // 4. Customer Home Dashboard
+                composable(Screen.ClientHome.route) {
+                    ClientHomeScreen(
+                        customerId = currentUser?.id,
+                        onMenuClick = {
+                            scope.launch { drawerState.open() }
+                        },
+                        onNavigateToAddNumber = {
+                            navController.navigate(Screen.AddNumber.route)
+                        },
+                        onNavigateToMyNumbers = {
+                            navController.navigate(Screen.MyNumbers.route)
+                        },
+                        onNavigateToProtections = {
+                            navController.navigate(Screen.Protections.route)
+                        },
+                        onNavigateToRequests = {
+                            navController.navigate(Screen.ProtectionRequests.route)
+                        },
+                        onNavigateToCreateRequest = { numberId ->
+                            val targetRoute = if (numberId != null) {
+                                "client/create_request?numberId=$numberId"
+                            } else {
+                                Screen.CreateProtectionRequest.route
+                            }
+                            navController.navigate(targetRoute)
+                        },
+                        onNavigateToNotifications = {
+                            navController.navigate(Screen.Notifications.route)
+                        }
+                    )
                 }
-            )
-        }
 
-        composable(Screen.AdminDashboard.route) {
-            AdminHomeScreen(
-                onBackToClient = {
-                    navController.popBackStack()
+                // 5. Customer Numbers List
+                composable(Screen.MyNumbers.route) {
+                    ClientNumbersScreen(
+                        customerId = currentUser?.id,
+                        onMenuClick = {
+                            scope.launch { drawerState.open() }
+                        },
+                        onNavigateToAddNumber = {
+                            navController.navigate(Screen.AddNumber.route)
+                        },
+                        onNavigateToCreateRequest = { numberId ->
+                            navController.navigate("client/create_request?numberId=$numberId")
+                        },
+                        onNavigateToNotifications = {
+                            navController.navigate(Screen.Notifications.route)
+                        }
+                    )
                 }
-            )
+
+                // 6. Add Phone Number (Auto-provider detection)
+                composable(Screen.AddNumber.route) {
+                    AddNumberScreen(
+                        onBack = { navController.popBackStack() },
+                        onNumberAddedSuccess = { navController.popBackStack() }
+                    )
+                }
+
+                // 7. Customer Protections List
+                composable(Screen.Protections.route) {
+                    ClientProtectionsScreen(
+                        customerId = currentUser?.id,
+                        onMenuClick = {
+                            scope.launch { drawerState.open() }
+                        },
+                        onNavigateToCreateRequest = { numberId ->
+                            val targetRoute = if (numberId != null) {
+                                "client/create_request?numberId=$numberId"
+                            } else {
+                                Screen.CreateProtectionRequest.route
+                            }
+                            navController.navigate(targetRoute)
+                        },
+                        onNavigateToNotifications = {
+                            navController.navigate(Screen.Notifications.route)
+                        }
+                    )
+                }
+
+                // 8. Protection Requests List
+                composable(Screen.ProtectionRequests.route) {
+                    ClientProtectionRequestsScreen(
+                        customerId = currentUser?.id,
+                        onMenuClick = {
+                            scope.launch { drawerState.open() }
+                        },
+                        onNavigateToCreateRequest = {
+                            navController.navigate(Screen.CreateProtectionRequest.route)
+                        },
+                        onNavigateToNotifications = {
+                            navController.navigate(Screen.Notifications.route)
+                        }
+                    )
+                }
+
+                // 9. Create Protection Request Form
+                composable(Screen.CreateProtectionRequest.route) {
+                    CreateProtectionRequestScreen(
+                        customerId = currentUser?.id,
+                        preselectedNumberId = null,
+                        onBack = { navController.popBackStack() },
+                        onRequestCreatedSuccess = {
+                            navController.navigate(Screen.ProtectionRequests.route) {
+                                popUpTo(Screen.ClientHome.route)
+                            }
+                        },
+                        onNavigateToAddNumber = {
+                            navController.navigate(Screen.AddNumber.route)
+                        }
+                    )
+                }
+
+                composable(
+                    route = "client/create_request?numberId={numberId}",
+                    arguments = listOf(
+                        navArgument("numberId") {
+                            type = NavType.StringType
+                            nullable = true
+                            defaultValue = null
+                        }
+                    )
+                ) { backStackEntry ->
+                    val preselectedNumberId = backStackEntry.arguments?.getString("numberId")
+                    CreateProtectionRequestScreen(
+                        customerId = currentUser?.id,
+                        preselectedNumberId = preselectedNumberId,
+                        onBack = { navController.popBackStack() },
+                        onRequestCreatedSuccess = {
+                            navController.navigate(Screen.ProtectionRequests.route) {
+                                popUpTo(Screen.ClientHome.route)
+                            }
+                        },
+                        onNavigateToAddNumber = {
+                            navController.navigate(Screen.AddNumber.route)
+                        }
+                    )
+                }
+
+                // 10. Notifications
+                composable(Screen.Notifications.route) {
+                    NotificationsScreen(
+                        customerId = currentUser?.id,
+                        onBack = { navController.popBackStack() }
+                    )
+                }
+
+                // 11. Account / Settings
+                composable(Screen.Settings.route) {
+                    SettingsScreen(
+                        user = currentUser,
+                        onBack = { navController.popBackStack() },
+                        onNavigateToHelp = { navController.navigate(Screen.Help.route) },
+                        onNavigateToTerms = { navController.navigate(Screen.Terms.route) },
+                        onNavigateToPrivacy = { navController.navigate(Screen.Privacy.route) },
+                        onNavigateToAbout = { navController.navigate(Screen.About.route) },
+                        onSignOut = {
+                            authViewModel.signOut {
+                                currentUser = null
+                                navController.navigate(Screen.Login.route) {
+                                    popUpTo(0) { inclusive = true }
+                                }
+                            }
+                        }
+                    )
+                }
+
+                // 12. Info Pages
+                composable(Screen.Help.route) {
+                    HelpScreen(onBack = { navController.popBackStack() })
+                }
+
+                composable(Screen.Terms.route) {
+                    TermsScreen(onBack = { navController.popBackStack() })
+                }
+
+                composable(Screen.Privacy.route) {
+                    PrivacyScreen(onBack = { navController.popBackStack() })
+                }
+
+                composable(Screen.About.route) {
+                    AboutScreen(onBack = { navController.popBackStack() })
+                }
+            }
         }
     }
 }

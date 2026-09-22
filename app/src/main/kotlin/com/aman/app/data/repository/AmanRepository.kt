@@ -343,6 +343,7 @@ class PaymentTaskRepositoryImpl : PaymentTaskRepository {
 // ---------------------------------------------------------------------------
 interface NotificationRepository {
     suspend fun getCustomerNotifications(customerId: String): AmanResult<List<AppNotification>>
+    suspend fun getUnreadCount(customerId: String): AmanResult<Int>
     suspend fun markAsRead(notificationId: String): AmanResult<Unit>
 }
 
@@ -360,6 +361,22 @@ class NotificationRepositoryImpl : NotificationRepository {
         }
     }
 
+    override suspend fun getUnreadCount(customerId: String): AmanResult<Int> {
+        if (!AmanSupabase.isConfigured()) return AmanResult.Success(0)
+        return try {
+            val list = AmanSupabase.postgrest.from("notifications")
+                .select {
+                    filter {
+                        eq("customer_id", customerId)
+                        eq("is_read", false)
+                    }
+                }.decodeList<AppNotification>()
+            AmanResult.Success(list.size)
+        } catch (e: Exception) {
+            AmanResult.Success(0)
+        }
+    }
+
     override suspend fun markAsRead(notificationId: String): AmanResult<Unit> {
         if (!AmanSupabase.isConfigured()) return AmanResult.Error(AmanError.ConfigurationError("Supabase غير مهيأ"))
         return try {
@@ -371,6 +388,27 @@ class NotificationRepositoryImpl : NotificationRepository {
             AmanResult.Success(Unit)
         } catch (e: Exception) {
             AmanResult.Error(AmanError.DatabaseError("تعذر تحديث الإشعار: ${e.message}", cause = e))
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// 9. إعدادات النظام ومعلومات التطبيق (System Settings)
+// ---------------------------------------------------------------------------
+interface SystemSettingsRepository {
+    suspend fun getSettings(): AmanResult<SystemSettings>
+}
+
+class SystemSettingsRepositoryImpl : SystemSettingsRepository {
+    override suspend fun getSettings(): AmanResult<SystemSettings> {
+        if (!AmanSupabase.isConfigured()) return AmanResult.Success(SystemSettings())
+        return try {
+            val settings = AmanSupabase.postgrest.from("system_settings")
+                .select()
+                .decodeSingleOrNull<SystemSettings>() ?: SystemSettings()
+            AmanResult.Success(settings)
+        } catch (e: Exception) {
+            AmanResult.Success(SystemSettings())
         }
     }
 }
