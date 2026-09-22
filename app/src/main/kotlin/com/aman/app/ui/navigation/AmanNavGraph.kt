@@ -14,6 +14,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.navArgument
 import com.aman.app.data.model.AppUser
+import com.aman.app.data.model.UserRole
+import com.aman.app.ui.screens.admin.*
 import com.aman.app.ui.screens.auth.AuthViewModel
 import com.aman.app.ui.screens.auth.LoginScreen
 import com.aman.app.ui.screens.auth.RegisterScreen
@@ -83,7 +85,12 @@ fun AmanNavGraph(
                             authViewModel.restoreSession { restoredUser ->
                                 if (restoredUser != null) {
                                     currentUser = restoredUser
-                                    navController.navigate(Screen.ClientHome.route) {
+                                    val destination = if (restoredUser.role == UserRole.ADMIN) {
+                                        Screen.AdminDashboard.route
+                                    } else {
+                                        Screen.ClientHome.route
+                                    }
+                                    navController.navigate(destination) {
                                         popUpTo(Screen.Splash.route) { inclusive = true }
                                     }
                                 } else {
@@ -103,7 +110,12 @@ fun AmanNavGraph(
                         onLoginSuccess = {
                             authViewModel.restoreSession { user ->
                                 currentUser = user
-                                navController.navigate(Screen.ClientHome.route) {
+                                val destination = if (user?.role == UserRole.ADMIN) {
+                                    Screen.AdminDashboard.route
+                                } else {
+                                    Screen.ClientHome.route
+                                }
+                                navController.navigate(destination) {
                                     popUpTo(Screen.Login.route) { inclusive = true }
                                 }
                             }
@@ -315,6 +327,177 @@ fun AmanNavGraph(
 
                 composable(Screen.About.route) {
                     AboutScreen(onBack = { navController.popBackStack() })
+                }
+
+                // ==========================================
+                // 13. Stage 4: Administration Layer Routes
+                // ==========================================
+
+                composable(Screen.AdminDashboard.route) {
+                    AdminDashboardScreen(
+                        onNavigate = { route -> navController.navigate(route) },
+                        onLogout = {
+                            authViewModel.signOut {
+                                currentUser = null
+                                navController.navigate(Screen.Login.route) {
+                                    popUpTo(0) { inclusive = true }
+                                }
+                            }
+                        }
+                    )
+                }
+
+                composable(Screen.AdminCustomers.route) {
+                    AdminCustomersScreen(
+                        onNavigate = { route -> navController.navigate(route) },
+                        onLogout = {
+                            authViewModel.signOut {
+                                currentUser = null
+                                navController.navigate(Screen.Login.route) {
+                                    popUpTo(0) { inclusive = true }
+                                }
+                            }
+                        }
+                    )
+                }
+
+                composable(
+                    route = Screen.AdminCustomerDetails.route,
+                    arguments = listOf(
+                        navArgument("customerId") { type = NavType.StringType }
+                    )
+                ) { backStackEntry ->
+                    val customerId = backStackEntry.arguments?.getString("customerId") ?: ""
+                    AdminCustomerDetailsScreen(
+                        customerId = customerId,
+                        onBack = { navController.popBackStack() }
+                    )
+                }
+
+                composable(Screen.AdminProtectionRequests.route) {
+                    AdminProtectionRequestsScreen(
+                        onNavigate = { route -> navController.navigate(route) },
+                        onLogout = {
+                            authViewModel.signOut {
+                                currentUser = null
+                                navController.navigate(Screen.Login.route) {
+                                    popUpTo(0) { inclusive = true }
+                                }
+                            }
+                        }
+                    )
+                }
+
+                composable(Screen.AdminProtections.route) {
+                    AdminProtectionsScreen(
+                        onNavigate = { route -> navController.navigate(route) },
+                        onLogout = {
+                            authViewModel.signOut {
+                                currentUser = null
+                                navController.navigate(Screen.Login.route) {
+                                    popUpTo(0) { inclusive = true }
+                                }
+                            }
+                        }
+                    )
+                }
+
+                composable(Screen.AdminTelecomProviders.route) {
+                    AdminTelecomProvidersScreen(
+                        onNavigate = { route -> navController.navigate(route) },
+                        onLogout = {
+                            authViewModel.signOut {
+                                currentUser = null
+                                navController.navigate(Screen.Login.route) {
+                                    popUpTo(0) { inclusive = true }
+                                }
+                            }
+                        }
+                    )
+                }
+
+                composable(Screen.AdminProtectionPlans.route) {
+                    AdminProtectionPlansScreen(
+                        onNavigate = { route -> navController.navigate(route) },
+                        onLogout = {
+                            authViewModel.signOut {
+                                currentUser = null
+                                navController.navigate(Screen.Login.route) {
+                                    popUpTo(0) { inclusive = true }
+                                }
+                            }
+                        }
+                    )
+                }
+
+                composable(Screen.AdminPaymentMethods.route) {
+                    AdminPaymentMethodsScreen(
+                        onNavigate = { route -> navController.navigate(route) },
+                        onLogout = {
+                            authViewModel.signOut {
+                                currentUser = null
+                                navController.navigate(Screen.Login.route) {
+                                    popUpTo(0) { inclusive = true }
+                                }
+                            }
+                        }
+                    )
+                }
+
+                composable(Screen.AdminPaymentTasks.route) {
+                    AdminPaymentTasksScreen(
+                        onNavigate = { route -> navController.navigate(route) },
+                        onLogout = {
+                            authViewModel.signOut {
+                                currentUser = null
+                                navController.navigate(Screen.Login.route) {
+                                    popUpTo(0) { inclusive = true }
+                                }
+                            }
+                        }
+                    )
+                }
+
+                composable(Screen.AdminTaskSettings.route) {
+                    AdminTaskSettingsScreen(
+                        onNavigate = { route -> navController.navigate(route) },
+                        onLogout = {
+                            authViewModel.signOut {
+                                currentUser = null
+                                navController.navigate(Screen.Login.route) {
+                                    popUpTo(0) { inclusive = true }
+                                }
+                            }
+                        }
+                    )
+                }
+
+                composable(Screen.AdminSystemSettings.route) {
+                    AdminSystemSettingsScreen(
+                        onNavigate = { route -> navController.navigate(route) },
+                        onLogout = {
+                            authViewModel.signOut {
+                                currentUser = null
+                                navController.navigate(Screen.Login.route) {
+                                    popUpTo(0) { inclusive = true }
+                                }
+                            }
+                        }
+                    )
+                }
+
+                composable(Screen.AdminAuditLogs.route) {
+                    AdminAuditLogsScreen(
+                        onNavigate = { route -> navController.navigate(route) },
+                        onLogout = {
+                            authViewModel.signOut {
+                                currentUser = null
+                                navController.navigate(Screen.Login.route) {
+                                    popUpTo(0) { inclusive = true }
+                                }
+                            }
+                        }
+                    )
                 }
             }
         }

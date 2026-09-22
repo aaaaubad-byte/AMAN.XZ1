@@ -1,0 +1,259 @@
+package com.aman.app.ui.screens.admin
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CardGiftcard
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.aman.app.data.model.ProtectionPlan
+import com.aman.app.ui.components.AdminDrawerContent
+import com.aman.app.ui.components.AdminTopAppBar
+import com.aman.app.ui.components.AmanCard
+import com.aman.app.ui.navigation.Screen
+import com.aman.app.ui.theme.*
+import kotlinx.coroutines.launch
+
+@Composable
+fun AdminProtectionPlansScreen(
+    viewModel: AdminProtectionPlansViewModel = viewModel(),
+    onNavigate: (String) -> Unit,
+    onLogout: () -> Unit
+) {
+    val uiState by viewModel.uiState.collectAsState()
+    val message by viewModel.message.collectAsState()
+    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+    val scope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    var showAddDialog by remember { mutableStateOf(false) }
+    var selectedProviderId by remember { mutableStateOf("") }
+    var planName by remember { mutableStateOf("") }
+    var planPrice by remember { mutableStateOf("") }
+    var planDuration by remember { mutableStateOf("90") }
+
+    LaunchedEffect(Unit) {
+        viewModel.loadData()
+    }
+
+    LaunchedEffect(message) {
+        message?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.clearMessage()
+        }
+    }
+
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        drawerContent = {
+            AdminDrawerContent(
+                currentRoute = Screen.AdminProtectionPlans.route,
+                onNavigate = onNavigate,
+                onLogout = onLogout,
+                onCloseDrawer = { scope.launch { drawerState.close() } }
+            )
+        }
+    ) {
+        Scaffold(
+            topBar = {
+                AdminTopAppBar(
+                    title = "باقات الحماية",
+                    subtitle = "تحديد الباقات والأسعار والمدد لكل شركة اتصالات",
+                    onNavigationClick = { scope.launch { drawerState.open() } },
+                    actions = {
+                        IconButton(onClick = { viewModel.loadData() }) {
+                            Icon(Icons.Default.Refresh, contentDescription = "تحديث", tint = Primary)
+                        }
+                    }
+                )
+            },
+            floatingActionButton = {
+                FloatingActionButton(
+                    onClick = { showAddDialog = true },
+                    containerColor = Primary,
+                    contentColor = SurfaceWhite
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = "إضافة باقة")
+                }
+            },
+            snackbarHost = { SnackbarHost(snackbarHostState) }
+        ) { padding ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(BackgroundLight)
+                    .padding(padding)
+                    .padding(16.dp)
+            ) {
+                when (val state = uiState) {
+                    is AdminPlansUiState.Loading -> {
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator(color = Primary)
+                        }
+                    }
+                    is AdminPlansUiState.ConfigurationPending -> {
+                        AmanCard {
+                            Text("تنبيه الاتصال بقاعدة البيانات", fontWeight = FontWeight.Bold, color = TextPrimary)
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text("الاتصال بـ Supabase معلق بانتظار تزويد المفاتيح الحقيقية.", color = TextSecondary, fontSize = 13.sp)
+                        }
+                    }
+                    is AdminPlansUiState.Error -> {
+                        AmanCard {
+                            Text("تعذر جلب باقات الحماية", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(state.message, color = TextSecondary, fontSize = 13.sp)
+                        }
+                    }
+                    is AdminPlansUiState.Content -> {
+                        Text(
+                            text = "الباقات المتاحة (${state.plans.size})",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 15.sp,
+                            color = TextPrimary
+                        )
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            items(state.plans) { plan ->
+                                AdminPlanCard(
+                                    plan = plan,
+                                    providerName = state.providers.find { it.id == plan.providerId }?.name ?: "شركة اتصالات",
+                                    onDisable = { viewModel.disablePlan(plan.id) }
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (showAddDialog) {
+                val state = uiState as? AdminPlansUiState.Content
+                AlertDialog(
+                    onDismissRequest = { showAddDialog = false },
+                    title = { Text("إضافة باقة حماية جديدة", fontWeight = FontWeight.Bold) },
+                    text = {
+                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Text("اختر الشركة:", fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                            state?.providers?.forEach { prov ->
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    RadioButton(
+                                        selected = selectedProviderId == prov.id,
+                                        onClick = { selectedProviderId = prov.id }
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(prov.name, fontSize = 13.sp)
+                                }
+                            }
+                            OutlinedTextField(
+                                value = planName,
+                                onValueChange = { planName = it },
+                                label = { Text("اسم الباقة (مثال: باقة 3 أشهر)") },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            OutlinedTextField(
+                                value = planPrice,
+                                onValueChange = { planPrice = it },
+                                label = { Text("السعر (ريال يمني)") },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            OutlinedTextField(
+                                value = planDuration,
+                                onValueChange = { planDuration = it },
+                                label = { Text("المدة بالأيام (مثال: 90)") },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                    },
+                    confirmButton = {
+                        Button(
+                            onClick = {
+                                val price = planPrice.toDoubleOrNull() ?: 0.0
+                                val duration = planDuration.toIntOrNull() ?: 90
+                                if (selectedProviderId.isNotBlank() && planName.isNotBlank() && price > 0) {
+                                    viewModel.addPlan(selectedProviderId, planName, price, duration)
+                                    showAddDialog = false
+                                    planName = ""
+                                    planPrice = ""
+                                }
+                            },
+                            enabled = selectedProviderId.isNotBlank() && planName.isNotBlank() && planPrice.isNotBlank(),
+                            colors = ButtonDefaults.buttonColors(containerColor = Primary)
+                        ) {
+                            Text("إضافة", color = SurfaceWhite)
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showAddDialog = false }) {
+                            Text("إلغاء", color = TextSecondary)
+                        }
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun AdminPlanCard(
+    plan: ProtectionPlan,
+    providerName: String,
+    onDisable: () -> Unit
+) {
+    AmanCard {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(LightTeal),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Default.CardGiftcard, contentDescription = null, tint = Primary)
+                }
+                Spacer(modifier = Modifier.width(12.dp))
+                Column {
+                    Text(plan.name, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = TextPrimary)
+                    Text("الشركة: $providerName • المدة: ${plan.durationDays} يوم", fontSize = 12.sp, color = TextSecondary)
+                }
+            }
+
+            Text("${plan.price} ريال", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = Primary)
+        }
+
+        if (plan.isActive) {
+            Spacer(modifier = Modifier.height(10.dp))
+            OutlinedButton(
+                onClick = onDisable,
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
+            ) {
+                Text("تعطيل الباقة (مع صون سلامة الحمايات القديمة)")
+            }
+        }
+    }
+}

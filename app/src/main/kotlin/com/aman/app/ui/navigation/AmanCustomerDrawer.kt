@@ -119,7 +119,7 @@ fun AmanCustomerDrawerContent(
                                 .padding(horizontal = 8.dp, vertical = 2.dp)
                         ) {
                             Text(
-                                text = "حساب عميل",
+                                text = if (user?.role == com.aman.app.data.model.UserRole.ADMIN) "مدير النظام" else "حساب عميل",
                                 color = Primary,
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Medium
@@ -141,6 +141,38 @@ fun AmanCustomerDrawerContent(
                     .verticalScroll(rememberScrollState())
                     .padding(horizontal = 12.dp)
             ) {
+                if (user?.role == com.aman.app.data.model.UserRole.ADMIN) {
+                    NavigationDrawerItem(
+                        icon = {
+                            Icon(
+                                imageVector = androidx.compose.material.icons.Icons.Default.AdminPanelSettings,
+                                contentDescription = "لوحة الإدارة",
+                                tint = Primary
+                            )
+                        },
+                        label = {
+                            Text(
+                                text = "لوحة الإدارة والتحكم",
+                                style = MaterialTheme.typography.bodyMedium.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = Primary
+                                )
+                            )
+                        },
+                        selected = false,
+                        onClick = { onNavigate(Screen.AdminDashboard.route) },
+                        shape = RoundedCornerShape(12.dp),
+                        colors = NavigationDrawerItemDefaults.colors(
+                            unselectedContainerColor = Primary.copy(alpha = 0.08f)
+                        ),
+                        modifier = Modifier.padding(vertical = 4.dp)
+                    )
+                    HorizontalDivider(
+                        modifier = Modifier.padding(vertical = 6.dp),
+                        color = BorderColor
+                    )
+                }
+
                 menuItems.forEach { item ->
                     val isSelected = currentRoute == item.route
                     NavigationDrawerItem(

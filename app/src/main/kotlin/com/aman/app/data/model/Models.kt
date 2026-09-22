@@ -306,3 +306,28 @@ data class SystemSettings(
     @SerialName("terms_and_conditions") val termsAndConditions: String? = null,
     @SerialName("privacy_policy") val privacyPolicy: String? = null
 )
+
+// ---------------------------------------------------------------------------
+// 13. نماذج الإدارة (Administration Models - Stage 4)
+// ---------------------------------------------------------------------------
+@Serializable
+data class AdminDashboardMetrics(
+    val customerCount: Int = 0,
+    val phoneNumberCount: Int = 0,
+    val pendingRequestsCount: Int = 0,
+    val activeProtectionsCount: Int = 0,
+    val expiredProtectionsCount: Int = 0,
+    val upcomingTasksCount: Int = 0,
+    val dueTasksCount: Int = 0,
+    val overdueTasksCount: Int = 0,
+    val completedTasksCount: Int = 0
+)
+
+@Serializable
+data class CustomerDetails(
+    val user: AppUser,
+    val numbers: List<CustomerNumber> = emptyList(),
+    val requests: List<ProtectionRequest> = emptyList(),
+    val protections: List<Protection> = emptyList()
+)
+
