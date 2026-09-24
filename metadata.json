@@ -1,6 +1,0 @@
-{
-  "name": "AMAN | أمان",
-  "description": "تطبيق أندرويد أصلي لمنظومة أمان لحماية وإدارة أرقام الاتصالات متصل مباشرة مع Supabase",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}
