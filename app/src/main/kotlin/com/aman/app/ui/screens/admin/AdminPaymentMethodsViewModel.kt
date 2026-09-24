@@ -66,6 +66,20 @@ class AdminPaymentMethodsViewModel(
         }
     }
 
+    fun updateMethod(method: PaymentMethod) {
+        viewModelScope.launch {
+            when (val res = adminRepo.updatePaymentMethod(method)) {
+                is AmanResult.Success -> {
+                    _message.value = "تم تحديث وسيلة الدفع بنجاح"
+                    loadMethods()
+                }
+                is AmanResult.Error -> {
+                    _message.value = "تعذر تحديث وسيلة الدفع: ${res.error.message}"
+                }
+            }
+        }
+    }
+
     fun disableMethod(methodId: String) {
         viewModelScope.launch {
             when (val res = adminRepo.disablePaymentMethod(methodId)) {

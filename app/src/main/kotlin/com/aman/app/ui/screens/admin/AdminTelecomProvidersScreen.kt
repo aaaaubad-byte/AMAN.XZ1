@@ -39,6 +39,7 @@ fun AdminTelecomProvidersScreen(
     val snackbarHostState = remember { SnackbarHostState() }
 
     var showAddDialog by remember { mutableStateOf(false) }
+    var editingProvider by remember { mutableStateOf<TelecomProvider?>(null) }
     var newName by remember { mutableStateOf("") }
     var newCode by remember { mutableStateOf("") }
     var newLength by remember { mutableStateOf("9") }
@@ -134,6 +135,13 @@ fun AdminTelecomProvidersScreen(
                             items(state.providers) { prov ->
                                 AdminProviderCard(
                                     provider = prov,
+                                    onEdit = {
+                                        editingProvider = prov
+                                        newName = prov.name
+                                        newCode = prov.code
+                                        newLength = prov.numberLength.toString()
+                                        newOrder = prov.displayOrder.toString()
+                                    },
                                     onDisable = { viewModel.disableProvider(prov.id) }
                                 )
                             }
@@ -142,10 +150,19 @@ fun AdminTelecomProvidersScreen(
                 }
             }
 
-            if (showAddDialog) {
+            if (showAddDialog || editingProvider != null) {
+                val dialogTitle = if (editingProvider != null) "تعديل بيانات الشركة" else "إضافة شركة اتصالات جديدة"
+                val confirmText = if (editingProvider != null) "حفظ" else "إضافة"
                 AlertDialog(
-                    onDismissRequest = { showAddDialog = false },
-                    title = { Text("إضافة شركة اتصالات جديدة", fontWeight = FontWeight.Bold) },
+                    onDismissRequest = {
+                        showAddDialog = false
+                        editingProvider = null
+                        newName = ""
+                        newCode = ""
+                        newLength = "9"
+                        newOrder = "1"
+                    },
+                    title = { Text(dialogTitle, fontWeight = FontWeight.Bold) },
                     text = {
                         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                             OutlinedTextField(
@@ -180,20 +197,40 @@ fun AdminTelecomProvidersScreen(
                                 if (newName.isNotBlank() && newCode.isNotBlank()) {
                                     val length = newLength.toIntOrNull() ?: 9
                                     val order = newOrder.toIntOrNull() ?: 1
-                                    viewModel.addProvider(newName, newCode, length, order)
+                                    if (editingProvider != null) {
+                                        val updated = editingProvider!!.copy(
+                                            name = newName.trim(),
+                                            code = newCode.trim(),
+                                            numberLength = length,
+                                            displayOrder = order
+                                        )
+                                        viewModel.updateProvider(updated)
+                                    } else {
+                                        viewModel.addProvider(newName, newCode, length, order)
+                                    }
                                     showAddDialog = false
+                                    editingProvider = null
                                     newName = ""
                                     newCode = ""
+                                    newLength = "9"
+                                    newOrder = "1"
                                 }
                             },
                             enabled = newName.isNotBlank() && newCode.isNotBlank(),
                             colors = ButtonDefaults.buttonColors(containerColor = Primary)
                         ) {
-                            Text("إضافة", color = SurfaceWhite)
+                            Text(confirmText, color = SurfaceWhite)
                         }
                     },
                     dismissButton = {
-                        TextButton(onClick = { showAddDialog = false }) {
+                        TextButton(onClick = {
+                            showAddDialog = false
+                            editingProvider = null
+                            newName = ""
+                            newCode = ""
+                            newLength = "9"
+                            newOrder = "1"
+                        }) {
                             Text("إلغاء", color = TextSecondary)
                         }
                     }
@@ -206,6 +243,7 @@ fun AdminTelecomProvidersScreen(
 @Composable
 fun AdminProviderCard(
     provider: TelecomProvider,
+    onEdit: () -> Unit,
     onDisable: () -> Unit
 ) {
     AmanCard {
@@ -246,14 +284,26 @@ fun AdminProviderCard(
             }
         }
 
-        if (provider.isActive) {
-            Spacer(modifier = Modifier.height(10.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
             OutlinedButton(
-                onClick = onDisable,
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                onClick = onEdit,
+                modifier = Modifier.weight(1f),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = Primary)
             ) {
-                Text("تعطيل الشركة (مع الحفاظ على الحمايات السابقة)")
+                Text("تعديل")
+            }
+
+            if (provider.isActive) {
+                OutlinedButton(
+                    onClick = onDisable,
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("تعطيل")
+                }
             }
         }
     }

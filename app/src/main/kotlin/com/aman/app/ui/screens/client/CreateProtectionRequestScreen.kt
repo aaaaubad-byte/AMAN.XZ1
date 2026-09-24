@@ -276,9 +276,10 @@ fun CreateProtectionRequestScreen(
                                                         )
                                                     )
                                                 }
-                                                if (!method.instructions.isNullOrBlank()) {
+                                                val methodInstructions = method.instructions
+                                                if (!methodInstructions.isNullOrBlank()) {
                                                     Text(
-                                                        text = method.instructions,
+                                                        text = methodInstructions,
                                                         style = MaterialTheme.typography.bodySmall.copy(
                                                             color = TextSecondary,
                                                             fontSize = 11.sp

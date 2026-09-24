@@ -107,7 +107,7 @@ class AdminRepositoryImpl : AdminRepository {
                 pendingRequestsCount = requests.count { it.status == ProtectionRequestStatus.PENDING },
                 activeProtectionsCount = protections.count { it.status == StoredProtectionStatus.ACTIVE },
                 expiredProtectionsCount = protections.count { it.status == StoredProtectionStatus.EXPIRED },
-                upcomingTasksCount = tasks.count { it.status == TaskStatus.UPCOMING },
+                upcomingTasksCount = tasks.count { it.status == TaskStatus.UPCOMING || it.status == TaskStatus.PENDING || it.status == TaskStatus.DUE_SOON },
                 dueTasksCount = tasks.count { it.status == TaskStatus.DUE },
                 overdueTasksCount = tasks.count { it.status == TaskStatus.OVERDUE },
                 completedTasksCount = tasks.count { it.status == TaskStatus.COMPLETED }

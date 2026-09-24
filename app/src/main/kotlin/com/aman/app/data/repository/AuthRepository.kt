@@ -152,13 +152,26 @@ class AuthRepository : AuthRepositoryContract {
         }
 
         return try {
-            val user = AmanSupabase.auth.currentUserOrNull() ?: return AmanResult.Success(null)
-            val appUser = AmanSupabase.postgrest.from("users")
-                .select {
-                    filter { eq("id", user.id) }
-                }.decodeSingleOrNull<AppUser>()
+            val authUser = AmanSupabase.auth.currentUserOrNull() ?: return AmanResult.Success(null)
+            val appUser = try {
+                AmanSupabase.postgrest.from("users")
+                    .select {
+                        filter { eq("id", authUser.id) }
+                    }
+                    .decodeSingleOrNull<AppUser>()
+            } catch (_: Exception) {
+                null
+            }
 
-            AmanResult.Success(appUser)
+            val resolvedUser = appUser ?: AppUser.fallbackFromAuth(
+                id = authUser.id,
+                email = authUser.email ?: "",
+                displayName = authUser.userMetadata?.get("name")?.toString()
+                    ?: authUser.userMetadata?.get("full_name")?.toString(),
+                rawRole = authUser.userMetadata?.get("role")?.toString(),
+            )
+
+            AmanResult.Success(resolvedUser)
         } catch (e: Exception) {
             AmanResult.Error(AmanError.DatabaseError("تعذر استرجاع بيانات المستخدم: ${e.message}", cause = e))
         }

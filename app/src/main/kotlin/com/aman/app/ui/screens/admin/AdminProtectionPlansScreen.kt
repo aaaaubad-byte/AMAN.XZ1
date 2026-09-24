@@ -39,6 +39,7 @@ fun AdminProtectionPlansScreen(
     val snackbarHostState = remember { SnackbarHostState() }
 
     var showAddDialog by remember { mutableStateOf(false) }
+    var editingPlan by remember { mutableStateOf<ProtectionPlan?>(null) }
     var selectedProviderId by remember { mutableStateOf("") }
     var planName by remember { mutableStateOf("") }
     var planPrice by remember { mutableStateOf("") }
@@ -135,6 +136,13 @@ fun AdminProtectionPlansScreen(
                                 AdminPlanCard(
                                     plan = plan,
                                     providerName = state.providers.find { it.id == plan.providerId }?.name ?: "شركة اتصالات",
+                                    onEdit = {
+                                        editingPlan = plan
+                                        selectedProviderId = plan.providerId
+                                        planName = plan.name
+                                        planPrice = plan.price.toString()
+                                        planDuration = plan.durationDays.toString()
+                                    },
                                     onDisable = { viewModel.disablePlan(plan.id) }
                                 )
                             }
@@ -143,11 +151,20 @@ fun AdminProtectionPlansScreen(
                 }
             }
 
-            if (showAddDialog) {
+            if (showAddDialog || editingPlan != null) {
                 val state = uiState as? AdminPlansUiState.Content
+                val dialogTitle = if (editingPlan != null) "تعديل بيانات الباقة" else "إضافة باقة حماية جديدة"
+                val confirmText = if (editingPlan != null) "حفظ" else "إضافة"
                 AlertDialog(
-                    onDismissRequest = { showAddDialog = false },
-                    title = { Text("إضافة باقة حماية جديدة", fontWeight = FontWeight.Bold) },
+                    onDismissRequest = {
+                        showAddDialog = false
+                        editingPlan = null
+                        selectedProviderId = ""
+                        planName = ""
+                        planPrice = ""
+                        planDuration = "90"
+                    },
+                    title = { Text(dialogTitle, fontWeight = FontWeight.Bold) },
                     text = {
                         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                             Text("اختر الشركة:", fontSize = 13.sp, fontWeight = FontWeight.Medium)
@@ -190,20 +207,40 @@ fun AdminProtectionPlansScreen(
                                 val price = planPrice.toDoubleOrNull() ?: 0.0
                                 val duration = planDuration.toIntOrNull() ?: 90
                                 if (selectedProviderId.isNotBlank() && planName.isNotBlank() && price > 0) {
-                                    viewModel.addPlan(selectedProviderId, planName, price, duration)
+                                    if (editingPlan != null) {
+                                        val updated = editingPlan!!.copy(
+                                            providerId = selectedProviderId,
+                                            name = planName.trim(),
+                                            price = price,
+                                            durationDays = duration
+                                        )
+                                        viewModel.updatePlan(updated)
+                                    } else {
+                                        viewModel.addPlan(selectedProviderId, planName, price, duration)
+                                    }
                                     showAddDialog = false
+                                    editingPlan = null
+                                    selectedProviderId = ""
                                     planName = ""
                                     planPrice = ""
+                                    planDuration = "90"
                                 }
                             },
                             enabled = selectedProviderId.isNotBlank() && planName.isNotBlank() && planPrice.isNotBlank(),
                             colors = ButtonDefaults.buttonColors(containerColor = Primary)
                         ) {
-                            Text("إضافة", color = SurfaceWhite)
+                            Text(confirmText, color = SurfaceWhite)
                         }
                     },
                     dismissButton = {
-                        TextButton(onClick = { showAddDialog = false }) {
+                        TextButton(onClick = {
+                            showAddDialog = false
+                            editingPlan = null
+                            selectedProviderId = ""
+                            planName = ""
+                            planPrice = ""
+                            planDuration = "90"
+                        }) {
                             Text("إلغاء", color = TextSecondary)
                         }
                     }
@@ -217,6 +254,7 @@ fun AdminProtectionPlansScreen(
 fun AdminPlanCard(
     plan: ProtectionPlan,
     providerName: String,
+    onEdit: () -> Unit,
     onDisable: () -> Unit
 ) {
     AmanCard {
@@ -245,14 +283,26 @@ fun AdminPlanCard(
             Text("${plan.price} ريال", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = Primary)
         }
 
-        if (plan.isActive) {
-            Spacer(modifier = Modifier.height(10.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
             OutlinedButton(
-                onClick = onDisable,
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                onClick = onEdit,
+                modifier = Modifier.weight(1f),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = Primary)
             ) {
-                Text("إيقاف إتاحة الباقة (مع استمرار الحمايات الجارية)")
+                Text("تعديل")
+            }
+
+            if (plan.isActive) {
+                OutlinedButton(
+                    onClick = onDisable,
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("إيقاف")
+                }
             }
         }
     }

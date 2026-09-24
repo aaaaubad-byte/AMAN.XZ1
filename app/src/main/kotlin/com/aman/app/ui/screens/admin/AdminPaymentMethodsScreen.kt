@@ -39,6 +39,7 @@ fun AdminPaymentMethodsScreen(
     val snackbarHostState = remember { SnackbarHostState() }
 
     var showAddDialog by remember { mutableStateOf(false) }
+    var editingMethod by remember { mutableStateOf<PaymentMethod?>(null) }
     var walletName by remember { mutableStateOf("") }
     var accountNumber by remember { mutableStateOf("") }
     var holderName by remember { mutableStateOf("") }
@@ -134,6 +135,13 @@ fun AdminPaymentMethodsScreen(
                             items(state.methods) { method ->
                                 AdminPaymentMethodCard(
                                     method = method,
+                                    onEdit = {
+                                        editingMethod = method
+                                        walletName = method.name
+                                        accountNumber = method.accountNumber
+                                        holderName = method.accountOwnerName
+                                        instructions = method.paymentInstructions ?: ""
+                                    },
                                     onDisable = { viewModel.disableMethod(method.id) }
                                 )
                             }
@@ -142,10 +150,19 @@ fun AdminPaymentMethodsScreen(
                 }
             }
 
-            if (showAddDialog) {
+            if (showAddDialog || editingMethod != null) {
+                val dialogTitle = if (editingMethod != null) "تعديل وسيلة الدفع" else "إضافة وسيلة دفع جديدة"
+                val confirmText = if (editingMethod != null) "حفظ" else "إضافة"
                 AlertDialog(
-                    onDismissRequest = { showAddDialog = false },
-                    title = { Text("إضافة وسيلة دفع جديدة", fontWeight = FontWeight.Bold) },
+                    onDismissRequest = {
+                        showAddDialog = false
+                        editingMethod = null
+                        walletName = ""
+                        accountNumber = ""
+                        holderName = ""
+                        instructions = ""
+                    },
+                    title = { Text(dialogTitle, fontWeight = FontWeight.Bold) },
                     text = {
                         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                             OutlinedTextField(
@@ -178,8 +195,19 @@ fun AdminPaymentMethodsScreen(
                         Button(
                             onClick = {
                                 if (walletName.isNotBlank() && accountNumber.isNotBlank()) {
-                                    viewModel.addMethod(walletName, accountNumber, holderName, instructions)
+                                    if (editingMethod != null) {
+                                        val updated = editingMethod!!.copy(
+                                            name = walletName.trim(),
+                                            accountNumber = accountNumber.trim(),
+                                            accountOwnerName = holderName.trim(),
+                                            paymentInstructions = if (instructions.isBlank()) null else instructions.trim()
+                                        )
+                                        viewModel.updateMethod(updated)
+                                    } else {
+                                        viewModel.addMethod(walletName, accountNumber, holderName, instructions)
+                                    }
                                     showAddDialog = false
+                                    editingMethod = null
                                     walletName = ""
                                     accountNumber = ""
                                     holderName = ""
@@ -189,11 +217,18 @@ fun AdminPaymentMethodsScreen(
                             enabled = walletName.isNotBlank() && accountNumber.isNotBlank(),
                             colors = ButtonDefaults.buttonColors(containerColor = Primary)
                         ) {
-                            Text("إضافة", color = SurfaceWhite)
+                            Text(confirmText, color = SurfaceWhite)
                         }
                     },
                     dismissButton = {
-                        TextButton(onClick = { showAddDialog = false }) {
+                        TextButton(onClick = {
+                            showAddDialog = false
+                            editingMethod = null
+                            walletName = ""
+                            accountNumber = ""
+                            holderName = ""
+                            instructions = ""
+                        }) {
                             Text("إلغاء", color = TextSecondary)
                         }
                     }
@@ -206,6 +241,7 @@ fun AdminPaymentMethodsScreen(
 @Composable
 fun AdminPaymentMethodCard(
     method: PaymentMethod,
+    onEdit: () -> Unit,
     onDisable: () -> Unit
 ) {
     AmanCard {
@@ -255,14 +291,26 @@ fun AdminPaymentMethodCard(
             )
         }
 
-        if (method.isActive) {
-            Spacer(modifier = Modifier.height(10.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
             OutlinedButton(
-                onClick = onDisable,
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                onClick = onEdit,
+                modifier = Modifier.weight(1f),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = Primary)
             ) {
-                Text("تعطيل وسيلة الدفع")
+                Text("تعديل")
+            }
+
+            if (method.isActive) {
+                OutlinedButton(
+                    onClick = onDisable,
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("تعطيل")
+                }
             }
         }
     }

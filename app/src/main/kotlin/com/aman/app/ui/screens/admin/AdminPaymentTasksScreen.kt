@@ -113,11 +113,11 @@ fun AdminPaymentTasksScreen(
                         // Filters
                         val filters = listOf(
                             null to "الكل (${state.allTasks.size})",
-                            TaskStatus.UPCOMING to "قادمة",
-                            TaskStatus.DUE to "مستحقة",
-                            TaskStatus.OVERDUE to "متأخرة",
-                            TaskStatus.COMPLETED to "مكتملة",
-                            TaskStatus.CANCELLED to "ملغاة"
+                            TaskStatus.UPCOMING to "قادمة (${state.allTasks.count { it.status == TaskStatus.UPCOMING || it.status == TaskStatus.PENDING }})",
+                            TaskStatus.DUE to "اليوم (${state.allTasks.count { it.status == TaskStatus.DUE || it.status == TaskStatus.DUE_SOON }})",
+                            TaskStatus.OVERDUE to "متأخرة (${state.allTasks.count { it.status == TaskStatus.OVERDUE }})",
+                            TaskStatus.COMPLETED to "مكتملة (${state.allTasks.count { it.status == TaskStatus.COMPLETED }})",
+                            TaskStatus.CANCELLED to "ملغاة (${state.allTasks.count { it.status == TaskStatus.CANCELLED }})"
                         )
 
                         LazyRow(

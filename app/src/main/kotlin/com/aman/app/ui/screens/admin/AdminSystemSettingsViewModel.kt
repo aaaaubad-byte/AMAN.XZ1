@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.JsonPrimitive
 
 sealed interface AdminSystemSettingsUiState {
     data object Loading : AdminSystemSettingsUiState
@@ -56,7 +57,7 @@ class AdminSystemSettingsViewModel(
         val current = (_uiState.value as? AdminSystemSettingsUiState.Content)?.settings ?: SystemSettings()
         val updated = current.copy(
             appName = appName.trim(),
-            contactData = contactInfo?.trim(),
+            rawContactData = JsonPrimitive(contactInfo?.trim() ?: ""),
             termsAndConditions = terms?.trim(),
             privacyPolicy = privacy?.trim()
         )

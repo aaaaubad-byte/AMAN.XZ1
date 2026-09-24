@@ -20,10 +20,24 @@ import kotlinx.serialization.json.jsonPrimitive
 @Serializable
 enum class UserRole {
     @SerialName("customer") CUSTOMER,
-    @SerialName("manager") MANAGER;
+    @SerialName("client") CLIENT,
+    @SerialName("manager") MANAGER,
+    @SerialName("admin") ADMIN;
+
+    companion object {
+        fun fromValue(rawRole: String?): UserRole {
+            return when (rawRole?.trim()?.lowercase()) {
+                "manager" -> MANAGER
+                "admin" -> ADMIN
+                "client" -> CLIENT
+                "customer" -> CUSTOMER
+                else -> CUSTOMER
+            }
+        }
+    }
 
     val isManagerOrAdmin: Boolean
-        get() = this == MANAGER
+        get() = this == MANAGER || this == ADMIN
 }
 
 @Serializable
@@ -32,11 +46,39 @@ data class AppUser(
     val name: String,
     val email: String,
     val role: UserRole = UserRole.CUSTOMER,
-    @SerialName("status") val status: String = "active",
+    @SerialName("status") val accountStatus: String = "active",
     @SerialName("created_at") val createdAt: String? = null,
     @SerialName("updated_at") val updatedAt: String? = null
 ) {
-    val accountStatus: String get() = status
+    val status: String get() = accountStatus
+    val username: String get() = name
+
+    constructor(
+        id: String,
+        email: String,
+        username: String,
+        role: UserRole = UserRole.CUSTOMER
+    ) : this(id = id, name = username, email = email, role = role, accountStatus = "active")
+
+    companion object {
+        fun fallbackFromAuth(
+            id: String,
+            email: String,
+            displayName: String? = null,
+            rawRole: String? = null,
+            accountStatus: String = "active"
+        ): AppUser {
+            val safeName = displayName?.takeIf { it.isNotBlank() }
+                ?: email.substringBefore('@').ifBlank { "User" }
+            return AppUser(
+                id = id,
+                name = safeName,
+                email = email,
+                role = UserRole.fromValue(rawRole),
+                accountStatus = accountStatus
+            )
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -48,14 +90,14 @@ data class TelecomProvider(
     val id: String,
     val name: String,
     val code: String,
-    @SerialName("phone_length") val phoneLength: Int = 9,
+    @SerialName("phone_length") val numberLength: Int = 9,
     @SerialName("is_active") val isActive: Boolean = true,
     @SerialName("is_visible_to_customers") val isVisibleToCustomer: Boolean = true,
     @SerialName("display_order") val displayOrder: Int = 0,
     @SerialName("created_at") val createdAt: String? = null,
     @SerialName("updated_at") val updatedAt: String? = null
 ) {
-    val numberLength: Int get() = phoneLength
+    val phoneLength: Int get() = numberLength
 }
 
 @Serializable
@@ -110,6 +152,7 @@ data class ProtectionPlan(
     @SerialName("provider_id") val providerId: String,
     val name: String,
     val price: Double,
+    @SerialName("currency") val currency: String = "SAR",
     @SerialName("protection_duration_days") val durationDays: Int = 30,
     @SerialName("is_active") val isActive: Boolean = true,
     @SerialName("is_visible_to_customers") val isVisibleToCustomer: Boolean = true,
@@ -215,8 +258,8 @@ data class Protection(
     @SerialName("provider_id") val providerId: String,
     @SerialName("plan_id") val planId: String,
     @SerialName("created_from_request_id") val createdFromRequestId: String? = null,
-    @SerialName("protection_value") val protectionValue: Double = 0.0,
-    @SerialName("protection_duration_days") val protectionDurationDays: Int = 30,
+    @SerialName("protection_value") val priceAtPurchase: Double = 0.0,
+    @SerialName("protection_duration_days") val durationAtPurchase: Int = 30,
     @SerialName("start_date") val startDate: String,
     @SerialName("end_date") val endDate: String,
     val status: StoredProtectionStatus = StoredProtectionStatus.ACTIVE,
@@ -229,9 +272,8 @@ data class Protection(
     @SerialName("plan") val plan: ProtectionPlan? = null,
     @SerialName("provider") val provider: TelecomProvider? = null
 ) {
-    // Backwards compatibility accessors for UI screens
-    val priceAtPurchase: Double get() = if (protectionValue > 0.0) protectionValue else (plan?.price ?: 0.0)
-    val durationAtPurchase: Int get() = if (protectionDurationDays > 0) protectionDurationDays else (plan?.durationDays ?: 30)
+    val protectionValue: Double get() = priceAtPurchase
+    val protectionDurationDays: Int get() = durationAtPurchase
 
     /**
      * حساب الأيام المتبقية حتى تاريخ الانتهاء
@@ -259,12 +301,12 @@ data class Protection(
     /**
      * "تحتاج تجديد" حالة محسوبة ديناميكياً وليست حالة مخزنة
      */
-    fun calculateDisplayStatus(thresholdDays: Int = 7): ProtectionDisplayStatus {
+    fun calculateDisplayStatus(warningDaysThreshold: Int = 7): ProtectionDisplayStatus {
         if (status == StoredProtectionStatus.EXPIRED) return ProtectionDisplayStatus.EXPIRED
         val remaining = daysRemaining()
         return when {
             remaining <= 0 -> ProtectionDisplayStatus.EXPIRED
-            remaining <= thresholdDays -> ProtectionDisplayStatus.NEEDS_RENEWAL
+            remaining <= warningDaysThreshold -> ProtectionDisplayStatus.NEEDS_RENEWAL
             else -> ProtectionDisplayStatus.ACTIVE
         }
     }
@@ -284,10 +326,26 @@ enum class TaskType {
 @Serializable
 enum class TaskStatus {
     @SerialName("upcoming") UPCOMING,
+    @SerialName("pending") PENDING,
+    @SerialName("due_soon") DUE_SOON,
     @SerialName("due") DUE,
     @SerialName("overdue") OVERDUE,
     @SerialName("completed") COMPLETED,
-    @SerialName("cancelled") CANCELLED
+    @SerialName("cancelled") CANCELLED;
+
+    val isActionable: Boolean
+        get() = this == UPCOMING || this == PENDING || this == DUE_SOON || this == DUE || this == OVERDUE
+
+    val label: String
+        get() = when (this) {
+            UPCOMING -> "قادمة"
+            PENDING -> "قيد التنفيذ"
+            DUE_SOON -> "قريبة الاستحقاق"
+            DUE -> "مستحقة"
+            OVERDUE -> "متأخرة"
+            COMPLETED -> "مكتملة"
+            CANCELLED -> "ملغاة"
+        }
 }
 
 @Serializable

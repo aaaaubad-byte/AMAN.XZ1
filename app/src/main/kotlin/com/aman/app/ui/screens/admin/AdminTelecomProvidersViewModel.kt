@@ -66,6 +66,20 @@ class AdminTelecomProvidersViewModel(
         }
     }
 
+    fun updateProvider(provider: TelecomProvider) {
+        viewModelScope.launch {
+            when (val res = adminRepo.updateProvider(provider)) {
+                is AmanResult.Success -> {
+                    _message.value = "تم تحديث بيانات الشركة بنجاح"
+                    loadProviders()
+                }
+                is AmanResult.Error -> {
+                    _message.value = "تعذر تحديث الشركة: ${res.error.message}"
+                }
+            }
+        }
+    }
+
     fun disableProvider(providerId: String) {
         viewModelScope.launch {
             when (val res = adminRepo.disableProvider(providerId)) {

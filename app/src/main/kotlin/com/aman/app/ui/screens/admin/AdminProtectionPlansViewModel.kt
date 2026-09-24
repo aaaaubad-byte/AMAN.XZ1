@@ -76,6 +76,20 @@ class AdminProtectionPlansViewModel(
         }
     }
 
+    fun updatePlan(plan: ProtectionPlan) {
+        viewModelScope.launch {
+            when (val res = adminRepo.updatePlan(plan)) {
+                is AmanResult.Success -> {
+                    _message.value = "تم تحديث بيانات الباقة بنجاح"
+                    loadData()
+                }
+                is AmanResult.Error -> {
+                    _message.value = "تعذر تحديث الباقة: ${res.error.message}"
+                }
+            }
+        }
+    }
+
     fun disablePlan(planId: String) {
         viewModelScope.launch {
             when (val res = adminRepo.disablePlan(planId)) {

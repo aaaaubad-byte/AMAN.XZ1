@@ -178,7 +178,7 @@ fun AdminNotificationsScreen(
                                                 )
                                                 Spacer(modifier = Modifier.height(6.dp))
                                                 Text(
-                                                    text = item.createdAt.take(19).replace("T", " "),
+                                                    text = item.createdAt?.take(19)?.replace("T", " ") ?: "—",
                                                     fontSize = 11.sp,
                                                     color = TextSecondary
                                                 )

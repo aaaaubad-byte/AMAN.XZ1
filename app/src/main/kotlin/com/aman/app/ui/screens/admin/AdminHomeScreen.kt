@@ -10,10 +10,7 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PendingActions
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -40,9 +37,20 @@ fun AdminHomeScreen(
     onBackToClient: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val message by viewModel.message.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+    var rejectingRequestId by remember { mutableStateOf<String?>(null) }
+    var rejectionReason by remember { mutableStateOf("") }
 
     LaunchedEffect(Unit) {
         viewModel.loadData()
+    }
+
+    LaunchedEffect(message) {
+        message?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.clearMessage()
+        }
     }
 
     Scaffold(
@@ -75,7 +83,8 @@ fun AdminHomeScreen(
                     Text("إدارة", color = Primary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
             }
-        }
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
         Column(
             modifier = Modifier
@@ -179,12 +188,15 @@ fun AdminHomeScreen(
                                 ) {
                                     AmanButton(
                                         text = "مراجعة واعتماد",
-                                        onClick = {},
+                                        onClick = { viewModel.approveRequest(req.id) },
                                         modifier = Modifier.weight(1f)
                                     )
                                     AmanButton(
                                         text = "رفض",
-                                        onClick = {},
+                                        onClick = {
+                                            rejectingRequestId = req.id
+                                            rejectionReason = ""
+                                        },
                                         modifier = Modifier.weight(1f),
                                         isSecondary = true
                                     )
@@ -210,6 +222,46 @@ fun AdminHomeScreen(
 
                 is AdminHomeUiState.Uninitialized -> {}
             }
+        }
+
+        if (rejectingRequestId != null) {
+            AlertDialog(
+                onDismissRequest = { rejectingRequestId = null },
+                title = { Text("تأكيد رفض طلب الحماية", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error) },
+                text = {
+                    Column {
+                        Text("يرجى كتابة سبب الرفض ليتم تسجيله في سجل التدقيق:", fontSize = 13.sp, color = TextPrimary)
+                        Spacer(modifier = Modifier.height(10.dp))
+                        OutlinedTextField(
+                            value = rejectionReason,
+                            onValueChange = { rejectionReason = it },
+                            placeholder = { Text("مثال: رقم الحوالة غير مطابق") },
+                            modifier = Modifier.fillMaxWidth(),
+                            minLines = 3
+                        )
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            val id = rejectingRequestId
+                            if (id != null && rejectionReason.isNotBlank()) {
+                                viewModel.rejectRequest(id, rejectionReason)
+                                rejectingRequestId = null
+                            }
+                        },
+                        enabled = rejectionReason.isNotBlank(),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                    ) {
+                        Text("تأكيد الرفض", color = SurfaceWhite)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { rejectingRequestId = null }) {
+                        Text("إلغاء", color = TextSecondary)
+                    }
+                }
+            )
         }
     }
 }

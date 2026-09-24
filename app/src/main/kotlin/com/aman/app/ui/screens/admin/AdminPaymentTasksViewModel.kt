@@ -72,7 +72,13 @@ class AdminPaymentTasksViewModel(
         val filtered = if (status == null) {
             current.allTasks
         } else {
-            current.allTasks.filter { it.status == status }
+            current.allTasks.filter { task ->
+                when (status) {
+                    TaskStatus.UPCOMING -> task.status == TaskStatus.UPCOMING || task.status == TaskStatus.PENDING
+                    TaskStatus.DUE -> task.status == TaskStatus.DUE || task.status == TaskStatus.DUE_SOON
+                    else -> task.status == status
+                }
+            }
         }
         _uiState.value = current.copy(
             selectedStatus = status,

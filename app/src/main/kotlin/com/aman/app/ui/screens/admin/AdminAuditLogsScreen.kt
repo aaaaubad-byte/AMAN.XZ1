@@ -133,7 +133,7 @@ fun AuditLogCard(log: AuditLog) {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                val actionArabic = when (log.action.uppercase()) {
+                val actionArabic = when (log.actionType.uppercase()) {
                     "INSERT" -> "إضافة سجل جديد"
                     "UPDATE" -> "تعديل وتحديث"
                     "DELETE" -> "حذف سجل"
@@ -142,7 +142,7 @@ fun AuditLogCard(log: AuditLog) {
                     "COMPLETE" -> "إكمال وسداد"
                     "RESCHEDULE" -> "إعادة جدولة"
                     "CANCEL" -> "إلغاء العملية"
-                    else -> log.action
+                    else -> log.actionType
                 }
                 Text(
                     text = actionArabic,
@@ -157,7 +157,8 @@ fun AuditLogCard(log: AuditLog) {
                 )
             }
             Spacer(modifier = Modifier.height(4.dp))
-            val tableArabic = when (log.tableName.lowercase()) {
+            val tableName = log.affectedTable ?: ""
+            val tableArabic = when (tableName.lowercase()) {
                 "customer_numbers" -> "أرقام العملاء"
                 "protection_requests" -> "طلبات الحماية"
                 "protections" -> "سجل الحمايات"
@@ -171,17 +172,18 @@ fun AuditLogCard(log: AuditLog) {
                 "task_settings" -> "إعدادات المهام"
                 "notifications" -> "مركز الإشعارات"
                 "audit_logs" -> "سجل العمليات"
-                else -> log.tableName
+                else -> tableName
             }
             Text(
                 text = "القسم: $tableArabic • رقم السجل: #${log.recordId?.take(8)?.uppercase() ?: "-"}",
                 fontSize = 12.sp,
                 color = TextSecondary
             )
-            if (!log.details.isNullOrBlank()) {
+            val detailsText = log.details
+            if (!detailsText.isNullOrBlank()) {
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    text = log.details,
+                    text = detailsText,
                     fontSize = 12.sp,
                     color = TextPrimary
                 )

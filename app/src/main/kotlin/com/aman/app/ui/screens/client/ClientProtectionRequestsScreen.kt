@@ -217,7 +217,7 @@ private fun ProtectionRequestItemCard(request: ProtectionRequest) {
             }
 
             // Rejection reason if rejected
-            if (request.status == RequestStatus.REJECTED && !request.rejectionReason.isNullOrBlank()) {
+            if (request.status == ProtectionRequestStatus.REJECTED && !request.rejectionReason.isNullOrBlank()) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Box(
                     modifier = Modifier

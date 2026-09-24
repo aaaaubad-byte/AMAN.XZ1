@@ -32,3 +32,7 @@ val StatusRejectedText = Color(0xFFDC2626)
 
 val StatusProtectedBg = Color(0xFFE9F8F5)
 val StatusProtectedText = Color(0xFF087F6E)
+
+val Danger = Color(0xFFDC2626)
+val Success = Color(0xFF059669)
+val Warning = Color(0xFFD97706)
