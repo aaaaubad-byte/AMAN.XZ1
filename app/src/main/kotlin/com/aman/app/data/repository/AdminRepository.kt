@@ -490,14 +490,40 @@ class AdminRepositoryImpl : AdminRepository {
     override suspend fun completePaymentTask(taskId: String): AmanResult<PaymentTask> {
         if (!AmanSupabase.isConfigured()) return AmanResult.Error(AmanError.ConfigurationError("Supabase غير مهيأ"))
         return try {
-            val params = buildJsonObject {
-                put("p_task_id", taskId)
+            val rpcResult = try {
+                val params = buildJsonObject {
+                    put("p_task_id", taskId)
+                }
+                AmanSupabase.postgrest.rpc(
+                    function = "complete_payment_task",
+                    parameters = params
+                ).decodeAs<PaymentTask>()
+            } catch (_: Exception) {
+                null
             }
-            val completedTask = AmanSupabase.postgrest.rpc(
-                function = "complete_payment_task",
-                parameters = params
-            ).decodeAs<PaymentTask>()
-            AmanResult.Success(completedTask)
+
+            if (rpcResult != null) return AmanResult.Success(rpcResult)
+
+            // Direct update fallback
+            val updated = AmanSupabase.postgrest.from("payment_tasks").update({
+                set("status", "completed")
+                set("completed_at", java.time.Instant.now().toString())
+            }) {
+                filter { eq("id", taskId) }
+                select()
+            }.decodeSingle<PaymentTask>()
+
+            try {
+                val user = AmanSupabase.auth.currentUserOrNull()
+                AmanSupabase.postgrest.from("audit_logs").insert(buildJsonObject {
+                    if (user != null) put("actor_id", user.id)
+                    put("action_type", "complete_payment_task")
+                    put("affected_table", "payment_tasks")
+                    put("affected_record_id", taskId)
+                })
+            } catch (_: Exception) {}
+
+            AmanResult.Success(updated)
         } catch (e: Exception) {
             AmanResult.Error(AmanError.DatabaseError("فشل إكمال المهمة: ${e.message}", cause = e))
         }
@@ -506,14 +532,39 @@ class AdminRepositoryImpl : AdminRepository {
     override suspend fun cancelPaymentTask(taskId: String, reason: String): AmanResult<Unit> {
         if (!AmanSupabase.isConfigured()) return AmanResult.Error(AmanError.ConfigurationError("Supabase غير مهيأ"))
         return try {
-            val params = buildJsonObject {
-                put("p_task_id", taskId)
-                put("p_reason", reason.trim())
+            val rpcSuccess = try {
+                val params = buildJsonObject {
+                    put("p_task_id", taskId)
+                    put("p_reason", reason.trim())
+                }
+                AmanSupabase.postgrest.rpc(
+                    function = "cancel_payment_task",
+                    parameters = params
+                )
+                true
+            } catch (_: Exception) {
+                false
             }
-            AmanSupabase.postgrest.rpc(
-                function = "cancel_payment_task",
-                parameters = params
-            )
+
+            if (!rpcSuccess) {
+                AmanSupabase.postgrest.from("payment_tasks").update({
+                    set("status", "cancelled")
+                }) {
+                    filter { eq("id", taskId) }
+                }
+
+                try {
+                    val user = AmanSupabase.auth.currentUserOrNull()
+                    AmanSupabase.postgrest.from("audit_logs").insert(buildJsonObject {
+                        if (user != null) put("actor_id", user.id)
+                        put("action_type", "cancel_payment_task")
+                        put("affected_table", "payment_tasks")
+                        put("affected_record_id", taskId)
+                        put("details", buildJsonObject { put("reason", reason.trim()) })
+                    })
+                } catch (_: Exception) {}
+            }
+
             AmanResult.Success(Unit)
         } catch (e: Exception) {
             AmanResult.Error(AmanError.DatabaseError("فشل إلغاء المهمة: ${e.message}", cause = e))
@@ -523,15 +574,43 @@ class AdminRepositoryImpl : AdminRepository {
     override suspend fun reschedulePaymentTask(taskId: String, newDueDate: String, reason: String): AmanResult<Unit> {
         if (!AmanSupabase.isConfigured()) return AmanResult.Error(AmanError.ConfigurationError("Supabase غير مهيأ"))
         return try {
-            val params = buildJsonObject {
-                put("p_task_id", taskId)
-                put("p_new_due_date", newDueDate)
-                put("p_reason", reason.trim())
+            val rpcSuccess = try {
+                val params = buildJsonObject {
+                    put("p_task_id", taskId)
+                    put("p_new_due_date", newDueDate)
+                    put("p_reason", reason.trim())
+                }
+                AmanSupabase.postgrest.rpc(
+                    function = "reschedule_payment_task",
+                    parameters = params
+                )
+                true
+            } catch (_: Exception) {
+                false
             }
-            AmanSupabase.postgrest.rpc(
-                function = "reschedule_payment_task",
-                parameters = params
-            )
+
+            if (!rpcSuccess) {
+                AmanSupabase.postgrest.from("payment_tasks").update({
+                    set("due_date", newDueDate)
+                }) {
+                    filter { eq("id", taskId) }
+                }
+
+                try {
+                    val user = AmanSupabase.auth.currentUserOrNull()
+                    AmanSupabase.postgrest.from("audit_logs").insert(buildJsonObject {
+                        if (user != null) put("actor_id", user.id)
+                        put("action_type", "reschedule_payment_task")
+                        put("affected_table", "payment_tasks")
+                        put("affected_record_id", taskId)
+                        put("details", buildJsonObject {
+                            put("new_due_date", newDueDate)
+                            put("reason", reason.trim())
+                        })
+                    })
+                } catch (_: Exception) {}
+            }
+
             AmanResult.Success(Unit)
         } catch (e: Exception) {
             AmanResult.Error(AmanError.DatabaseError("فشل إعادة جدولة المهمة: ${e.message}", cause = e))
@@ -555,20 +634,45 @@ class AdminRepositoryImpl : AdminRepository {
     override suspend fun updateTaskSettings(settings: TaskSettings): AmanResult<TaskSettings> {
         if (!AmanSupabase.isConfigured()) return AmanResult.Error(AmanError.ConfigurationError("Supabase غير مهيأ"))
         return try {
-            val params = buildJsonObject {
-                put("p_provider_id", settings.providerId)
-                put("p_first_task_enabled", settings.firstTaskEnabled)
-                put("p_first_task_amount", settings.firstTaskAmount ?: 0.0)
-                put("p_recurring_task_enabled", settings.recurringTaskEnabled)
-                put("p_recurring_task_amount", settings.recurringTaskAmount)
-                put("p_repeat_interval_days", settings.recurringCycleDays)
-                put("p_days_visible_before_due", settings.daysVisibleBeforeDue)
-                put("p_manual_reschedule_enabled", settings.manualRescheduleEnabled)
+            val rpcResult = try {
+                val params = buildJsonObject {
+                    put("p_provider_id", settings.providerId)
+                    put("p_first_task_enabled", settings.firstTaskEnabled)
+                    put("p_first_task_amount", settings.firstTaskAmount ?: 0.0)
+                    put("p_recurring_task_enabled", settings.recurringTaskEnabled)
+                    put("p_recurring_task_amount", settings.recurringTaskAmount)
+                    put("p_repeat_interval_days", settings.repeatIntervalDays)
+                    put("p_days_visible_before_due", settings.daysVisibleBeforeDue)
+                    put("p_manual_reschedule_enabled", settings.manualRescheduleEnabled)
+                }
+                AmanSupabase.postgrest.rpc(
+                    function = "admin_update_task_settings",
+                    parameters = params
+                ).decodeAs<TaskSettings>()
+            } catch (_: Exception) {
+                null
             }
-            val updated = AmanSupabase.postgrest.rpc(
-                function = "admin_update_task_settings",
-                parameters = params
-            ).decodeAs<TaskSettings>()
+
+            if (rpcResult != null) return AmanResult.Success(rpcResult)
+
+            // Direct upsert into task_settings
+            val updatePayload = buildJsonObject {
+                if (settings.id.isNotBlank()) put("id", settings.id)
+                put("provider_id", settings.providerId)
+                put("first_task_enabled", settings.firstTaskEnabled)
+                put("first_task_amount", settings.firstTaskAmount ?: 0.0)
+                put("recurring_task_enabled", settings.recurringTaskEnabled)
+                put("recurring_task_amount", settings.recurringTaskAmount)
+                put("repeat_interval_days", settings.repeatIntervalDays)
+                put("days_visible_before_due", settings.daysVisibleBeforeDue)
+                put("manual_reschedule_enabled", settings.manualRescheduleEnabled)
+            }
+
+            val updated = AmanSupabase.postgrest.from("task_settings")
+                .upsert(updatePayload) {
+                    select()
+                }.decodeSingle<TaskSettings>()
+
             AmanResult.Success(updated)
         } catch (e: Exception) {
             AmanResult.Error(AmanError.DatabaseError("تعذر تحديث إعدادات المهام: ${e.message}", cause = e))
@@ -620,7 +724,20 @@ class AdminRepositoryImpl : AdminRepository {
         return try {
             val list = AmanSupabase.postgrest.from("audit_logs")
                 .select().decodeList<AuditLog>()
-            AmanResult.Success(list)
+                .sortedByDescending { it.createdAt ?: "" }
+
+            // Enrich with user name/email if actorId present
+            val users = try {
+                AmanSupabase.postgrest.from("users").select().decodeList<AppUser>()
+            } catch (_: Exception) { emptyList() }
+            val userMap = users.associateBy { it.id }
+
+            val enriched = list.map { log ->
+                val actorUser = log.actorId?.let { userMap[it] }
+                log.copy(actorName = actorUser?.name ?: actorUser?.email)
+            }
+
+            AmanResult.Success(enriched)
         } catch (e: Exception) {
             AmanResult.Error(AmanError.DatabaseError("تعذر جلب سجل التدقيق: ${e.message}", cause = e))
         }

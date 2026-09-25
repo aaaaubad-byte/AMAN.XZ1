@@ -50,6 +50,7 @@ data class AppUser(
     val role: UserRole = UserRole.CUSTOMER,
     @SerialName("status") val accountStatus: String = "active",
     @SerialName("created_at") val createdAt: String? = null,
+    val actorName: String? = null,
     @SerialName("updated_at") val updatedAt: String? = null
 ) {
     val status: String get() = accountStatus
@@ -97,6 +98,7 @@ data class TelecomProvider(
     @SerialName("is_visible_to_customers") val isVisibleToCustomer: Boolean = true,
     @SerialName("display_order") val displayOrder: Int = 0,
     @SerialName("created_at") val createdAt: String? = null,
+    val actorName: String? = null,
     @SerialName("updated_at") val updatedAt: String? = null
 ) {
     val phoneLength: Int get() = numberLength
@@ -109,6 +111,7 @@ data class TelecomPrefix(
     val prefix: String,
     @SerialName("is_active") val isActive: Boolean = true,
     @SerialName("created_at") val createdAt: String? = null,
+    val actorName: String? = null,
     @SerialName("updated_at") val updatedAt: String? = null
 )
 
@@ -139,6 +142,7 @@ data class CustomerNumber(
     val status: CustomerNumberStatus = CustomerNumberStatus.ACTIVE,
     @SerialName("protection_status") val protectionStatus: NumberProtectionStatus = NumberProtectionStatus.UNPROTECTED,
     @SerialName("created_at") val createdAt: String? = null,
+    val actorName: String? = null,
     @SerialName("updated_at") val updatedAt: String? = null,
     // Expanded relations
     @SerialName("telecom_provider") val provider: TelecomProvider? = null
@@ -159,6 +163,7 @@ data class ProtectionPlan(
     @SerialName("is_active") val isActive: Boolean = true,
     @SerialName("is_visible_to_customers") val isVisibleToCustomer: Boolean = true,
     @SerialName("created_at") val createdAt: String? = null,
+    val actorName: String? = null,
     @SerialName("updated_at") val updatedAt: String? = null
 )
 
@@ -175,6 +180,7 @@ data class PaymentMethod(
     @SerialName("payment_instructions") val paymentInstructions: String? = null,
     @SerialName("is_active") val isActive: Boolean = true,
     @SerialName("created_at") val createdAt: String? = null,
+    val actorName: String? = null,
     @SerialName("updated_at") val updatedAt: String? = null
 ) {
     val walletName: String get() = name
@@ -215,6 +221,7 @@ data class ProtectionRequest(
     @SerialName("payment_account_owner_snapshot") val paymentAccountOwnerSnapshot: String? = null,
     @SerialName("payment_instructions_snapshot") val paymentInstructionsSnapshot: String? = null,
     @SerialName("created_at") val createdAt: String? = null,
+    val actorName: String? = null,
     @SerialName("updated_at") val updatedAt: String? = null,
     // Expanded relations
     @SerialName("customer_number") val customerNumber: CustomerNumber? = null,
@@ -268,6 +275,7 @@ data class Protection(
     @SerialName("plan_name_snapshot") val planNameSnapshot: String? = null,
     @SerialName("provider_name_snapshot") val providerNameSnapshot: String? = null,
     @SerialName("created_at") val createdAt: String? = null,
+    val actorName: String? = null,
     @SerialName("updated_at") val updatedAt: String? = null,
     // Expanded relations
     @SerialName("customer_number") val customerNumber: CustomerNumber? = null,
@@ -370,6 +378,7 @@ data class PaymentTask(
     @SerialName("cancelled_by") val cancelledBy: String? = null,
     @SerialName("cancellation_reason") val cancellationReason: String? = null,
     @SerialName("created_at") val createdAt: String? = null,
+    val actorName: String? = null,
     @SerialName("updated_at") val updatedAt: String? = null,
     @SerialName("customer_number") val customerNumber: CustomerNumber? = null,
     @SerialName("provider") val provider: TelecomProvider? = null
@@ -417,6 +426,7 @@ data class TaskSettings(
     @SerialName("days_visible_before_due") val daysVisibleBeforeDue: Int = 7,
     @SerialName("manual_reschedule_enabled") val manualRescheduleEnabled: Boolean = true,
     @SerialName("created_at") val createdAt: String? = null,
+    val actorName: String? = null,
     @SerialName("updated_at") val updatedAt: String? = null
 ) {
     val recurringCycleDays: Int get() = repeatIntervalDays
@@ -435,7 +445,8 @@ data class AppNotification(
     @SerialName("notification_type") val type: String = "general",
     @SerialName("is_read") val isRead: Boolean = false,
     @SerialName("read_at") val readAt: String? = null,
-    @SerialName("created_at") val createdAt: String? = null
+    @SerialName("created_at") val createdAt: String? = null,
+    val actorName: String? = null
 )
 
 // ---------------------------------------------------------------------------
@@ -452,7 +463,8 @@ data class AuditLog(
     @SerialName("details") val rawDetails: JsonElement? = null,
     @SerialName("old_data") val rawOldData: JsonElement? = null,
     @SerialName("new_data") val rawNewData: JsonElement? = null,
-    @SerialName("created_at") val createdAt: String? = null
+    @SerialName("created_at") val createdAt: String? = null,
+    val actorName: String? = null
 ) {
     val details: String? get() = when (val el = rawDetails) {
         null -> null

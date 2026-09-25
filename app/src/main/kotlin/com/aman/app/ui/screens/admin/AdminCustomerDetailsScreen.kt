@@ -183,6 +183,48 @@ fun AdminCustomerDetailsScreen(
                                 }
                             }
                         }
+
+                        // Protection Requests
+                        item {
+                            Text(
+                                text = "طلبات الحماية (${state.details.requests.size})",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 15.sp,
+                                color = TextPrimary
+                            )
+                        }
+                        if (state.details.requests.isEmpty()) {
+                            item {
+                                AmanCard {
+                                    Text("لا توجد طلبات حماية لهذا العميل", color = TextSecondary, fontSize = 13.sp)
+                                }
+                            }
+                        } else {
+                            items(state.details.requests) { req ->
+                                Card(
+                                    shape = RoundedCornerShape(10.dp),
+                                    colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(12.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Column {
+                                            Text(req.planNameSnapshot ?: "طلب حماية", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                            Text("${req.protectionValue} ريال • ${req.planDurationDaysSnapshot} يوم", fontSize = 12.sp, color = TextSecondary)
+                                            if (req.createdAt != null) {
+                                                Text(req.createdAt.take(10), fontSize = 11.sp, color = TextSecondary)
+                                            }
+                                        }
+                                        StatusBadge(status = req.status.name)
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }

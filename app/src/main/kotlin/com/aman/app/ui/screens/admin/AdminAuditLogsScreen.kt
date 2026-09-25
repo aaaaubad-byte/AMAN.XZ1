@@ -133,15 +133,16 @@ fun AuditLogCard(log: AuditLog) {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                val actionArabic = when (log.actionType.uppercase()) {
-                    "INSERT" -> "إضافة سجل جديد"
-                    "UPDATE" -> "تعديل وتحديث"
-                    "DELETE" -> "حذف سجل"
-                    "APPROVE" -> "موافقة واعتماد"
-                    "REJECT" -> "رفض الطلب"
-                    "COMPLETE" -> "إكمال وسداد"
-                    "RESCHEDULE" -> "إعادة جدولة"
-                    "CANCEL" -> "إلغاء العملية"
+                val actionLower = log.actionType.lowercase()
+                val actionArabic = when {
+                    actionLower == "insert" -> "إضافة سجل جديد"
+                    actionLower == "update" -> "تعديل وتحديث"
+                    actionLower == "delete" -> "حذف سجل"
+                    actionLower.contains("approve") -> "موافقة واعتماد طلب"
+                    actionLower.contains("reject") -> "رفض طلب حماية"
+                    actionLower.contains("complete") -> "إكمال وسداد مهمة"
+                    actionLower.contains("reschedule") -> "إعادة جدولة مهمة"
+                    actionLower.contains("cancel") -> "إلغاء مهمة مالية"
                     else -> log.actionType
                 }
                 Text(
@@ -174,8 +175,9 @@ fun AuditLogCard(log: AuditLog) {
                 "audit_logs" -> "سجل العمليات"
                 else -> tableName
             }
+            val actorText = if (!log.actorName.isNullOrBlank()) "بواسطة: ${log.actorName} • " else ""
             Text(
-                text = "القسم: $tableArabic • رقم السجل: #${log.recordId?.take(8)?.uppercase() ?: "-"}",
+                text = "$actorTextالقسم: $tableArabic • السجل: #${log.recordId?.take(8)?.uppercase() ?: "-"}",
                 fontSize = 12.sp,
                 color = TextSecondary
             )
