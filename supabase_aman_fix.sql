@@ -514,29 +514,72 @@ ALTER TABLE public.audit_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.system_settings ENABLE ROW LEVEL SECURITY;
 
 -- Basic public read policies for app data
-CREATE POLICY IF NOT EXISTS public_read_telecom_providers
-ON public.telecom_providers
-FOR SELECT
-USING (true);
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_policies
+        WHERE schemaname = 'public'
+          AND tablename = 'telecom_providers'
+          AND policyname = 'public_read_telecom_providers'
+    ) THEN
+        CREATE POLICY public_read_telecom_providers
+        ON public.telecom_providers
+        FOR SELECT
+        USING (true);
+    END IF;
 
-CREATE POLICY IF NOT EXISTS public_read_protection_plans
-ON public.protection_plans
-FOR SELECT
-USING (true);
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_policies
+        WHERE schemaname = 'public'
+          AND tablename = 'protection_plans'
+          AND policyname = 'public_read_protection_plans'
+    ) THEN
+        CREATE POLICY public_read_protection_plans
+        ON public.protection_plans
+        FOR SELECT
+        USING (true);
+    END IF;
 
-CREATE POLICY IF NOT EXISTS public_read_payment_methods
-ON public.payment_methods
-FOR SELECT
-USING (true);
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_policies
+        WHERE schemaname = 'public'
+          AND tablename = 'payment_methods'
+          AND policyname = 'public_read_payment_methods'
+    ) THEN
+        CREATE POLICY public_read_payment_methods
+        ON public.payment_methods
+        FOR SELECT
+        USING (true);
+    END IF;
 
-CREATE POLICY IF NOT EXISTS public_read_task_settings
-ON public.task_settings
-FOR SELECT
-USING (true);
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_policies
+        WHERE schemaname = 'public'
+          AND tablename = 'task_settings'
+          AND policyname = 'public_read_task_settings'
+    ) THEN
+        CREATE POLICY public_read_task_settings
+        ON public.task_settings
+        FOR SELECT
+        USING (true);
+    END IF;
 
-CREATE POLICY IF NOT EXISTS public_read_system_settings
-ON public.system_settings
-FOR SELECT
-USING (true);
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_policies
+        WHERE schemaname = 'public'
+          AND tablename = 'system_settings'
+          AND policyname = 'public_read_system_settings'
+    ) THEN
+        CREATE POLICY public_read_system_settings
+        ON public.system_settings
+        FOR SELECT
+        USING (true);
+    END IF;
+END $$;
 
 COMMIT;
