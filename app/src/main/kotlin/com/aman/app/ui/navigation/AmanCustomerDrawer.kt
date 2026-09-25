@@ -57,7 +57,7 @@ fun AmanCustomerDrawerContent(
     ModalDrawerSheet(
         modifier = modifier.fillMaxWidth(0.80f),
         drawerContainerColor = SurfaceWhite,
-        drawerShape = RoundedCornerShape(topEnd = 0.dp, bottomEnd = 0.dp)
+        drawerShape = RoundedCornerShape(topEnd = 18.dp, bottomEnd = 18.dp)
     ) {
         Column(
             modifier = Modifier
@@ -68,7 +68,12 @@ fun AmanCustomerDrawerContent(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 12.dp)
+                    .background(
+                        brush = androidx.compose.ui.graphics.Brush.linearGradient(
+                            listOf(Primary, PrimaryVariant)
+                        )
+                    )
+                    .padding(horizontal = 20.dp, vertical = 18.dp)
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically
@@ -77,13 +82,13 @@ fun AmanCustomerDrawerContent(
                         modifier = Modifier
                             .size(56.dp)
                             .clip(CircleShape)
-                            .background(Primary),
+                            .background(SurfaceWhite.copy(alpha = 0.16f)),
                         contentAlignment = Alignment.Center
                     ) {
                         val initial = (user?.name?.firstOrNull() ?: 'أ').toString()
                         Text(
                             text = initial,
-                            color = Color.White,
+                            color = SurfaceWhite,
                             style = MaterialTheme.typography.titleLarge.copy(
                                 fontWeight = FontWeight.Bold
                             )
@@ -97,7 +102,7 @@ fun AmanCustomerDrawerContent(
                             text = user?.name ?: "عميل أمان",
                             style = MaterialTheme.typography.titleMedium.copy(
                                 fontWeight = FontWeight.Bold,
-                                color = TextPrimary
+                                color = SurfaceWhite
                             ),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
@@ -105,22 +110,22 @@ fun AmanCustomerDrawerContent(
                         Text(
                             text = user?.email ?: "",
                             style = MaterialTheme.typography.bodySmall.copy(
-                                color = TextSecondary,
+                                color = SurfaceWhite.copy(alpha = 0.8f),
                                 fontSize = 12.sp
                             ),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
-                        Spacer(modifier = Modifier.height(4.dp))
+                        Spacer(modifier = Modifier.height(6.dp))
                         Box(
                             modifier = Modifier
-                                .clip(RoundedCornerShape(6.dp))
-                                .background(Primary.copy(alpha = 0.1f))
-                                .padding(horizontal = 8.dp, vertical = 2.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(SurfaceWhite.copy(alpha = 0.18f))
+                                .padding(horizontal = 8.dp, vertical = 3.dp)
                         ) {
                             Text(
                                 text = if (user?.role?.isManagerOrAdmin == true) "مدير النظام" else "حساب عميل",
-                                color = Primary,
+                                color = SurfaceWhite,
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Medium
                             )

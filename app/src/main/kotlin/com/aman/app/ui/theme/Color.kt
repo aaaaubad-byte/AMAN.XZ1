@@ -2,23 +2,23 @@ package com.aman.app.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Verified Brand Color Palette from AMAN Design System
-val Primary = Color(0xFF087F6E)
-val PrimaryVariant = Color(0xFF065B4F)
-val Secondary = Color(0xFF19B99A)
-val SecondaryVariant = Color(0xFF139178)
-val Accent = Color(0xFF6EE7B7)
-val LightTeal = Color(0xFFE9F8F5)
+// Refreshed AMAN brand palette for a more premium and modern identity
+val Primary = Color(0xFF0F766E)
+val PrimaryVariant = Color(0xFF115E59)
+val Secondary = Color(0xFF14B8A6)
+val SecondaryVariant = Color(0xFF0D9488)
+val Accent = Color(0xFFF4C987)
+val LightTeal = Color(0xFFE6F9F7)
 
-val BackgroundLight = Color(0xFFF7FAF9)
+val BackgroundLight = Color(0xFFF3F8F7)
 val BackgroundMuted = Color(0xFFF7FAF9)
 val SurfaceWhite = Color(0xFFFFFFFF)
 
-val TextPrimary = Color(0xFF18302D)
-val TextSecondary = Color(0xFF667A77)
-val TextDisabled = Color(0xFF9EAEAC)
+val TextPrimary = Color(0xFF102A27)
+val TextSecondary = Color(0xFF4B5E5A)
+val TextDisabled = Color(0xFF9AA7A4)
 
-val BorderColor = Color(0xFFDCE9E6)
+val BorderColor = Color(0xFFD8E5E1)
 
 // Status Colors
 val StatusPendingBg = Color(0xFFFEF3C7)

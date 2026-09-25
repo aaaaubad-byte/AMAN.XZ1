@@ -1,5 +1,6 @@
 package com.aman.app.ui.screens.auth
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -13,11 +14,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.aman.app.R
 import com.aman.app.data.remote.AmanSupabase
 import com.aman.app.ui.components.AmanButton
 import com.aman.app.ui.theme.*
@@ -89,20 +92,23 @@ fun LoginScreen(
         // Logo
         Box(
             modifier = Modifier
-                .size(72.dp)
-                .clip(RoundedCornerShape(20.dp))
-                .background(Primary),
+                .size(96.dp)
+                .clip(RoundedCornerShape(28.dp))
+                .background(
+                    brush = androidx.compose.ui.graphics.Brush.linearGradient(
+                        listOf(Primary, PrimaryVariant)
+                    )
+                ),
             contentAlignment = Alignment.Center
         ) {
-            Text(
-                text = "أمان",
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold,
-                color = SurfaceWhite
+            Image(
+                painter = painterResource(id = R.drawable.aman_logo),
+                contentDescription = "شعار أمان",
+                modifier = Modifier.size(76.dp)
             )
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(20.dp))
 
         Text(
             text = "تسجيل الدخول",

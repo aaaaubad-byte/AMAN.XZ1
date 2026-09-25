@@ -38,14 +38,15 @@ fun AmanButton(
             .fillMaxWidth()
             .height(52.dp),
         enabled = enabled,
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(14.dp),
         colors = ButtonDefaults.buttonColors(
             containerColor = if (isSecondary) SurfaceWhite else Primary,
             contentColor = if (isSecondary) Primary else SurfaceWhite,
-            disabledContainerColor = Color(0xFFDCE9E6),
+            disabledContainerColor = Color(0xFFE3EDEB),
             disabledContentColor = TextDisabled
         ),
-        border = if (isSecondary) ButtonDefaults.outlinedButtonBorder else null
+        border = if (isSecondary) ButtonDefaults.outlinedButtonBorder else null,
+        elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp, pressedElevation = 0.dp)
     ) {
         Text(
             text = text,
@@ -105,10 +106,10 @@ fun AmanCard(
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .border(1.dp, BorderColor, RoundedCornerShape(16.dp)),
-        shape = RoundedCornerShape(16.dp),
+            .border(1.dp, BorderColor, RoundedCornerShape(18.dp)),
+        shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
             modifier = Modifier.padding(16.dp),

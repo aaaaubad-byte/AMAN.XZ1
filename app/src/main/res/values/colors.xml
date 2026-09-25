@@ -1,20 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Brand Palette extracted from AMAN visual guide -->
-    <color name="primary">#087F6E</color>
-    <color name="primary_variant">#065B4F</color>
-    <color name="secondary">#19B99A</color>
-    <color name="secondary_variant">#139178</color>
-    <color name="accent">#6EE7B7</color>
-    <color name="light_teal">#E9F8F5</color>
-    <color name="background">#F7FAF9</color>
+    <!-- Refreshed AMAN brand palette -->
+    <color name="primary">#0F766E</color>
+    <color name="primary_variant">#115E59</color>
+    <color name="secondary">#14B8A6</color>
+    <color name="secondary_variant">#0D9488</color>
+    <color name="accent">#F4C987</color>
+    <color name="light_teal">#E6F9F7</color>
+    <color name="background">#F3F8F7</color>
     <color name="surface">#FFFFFF</color>
     
     <!-- Text Colors -->
-    <color name="text_primary">#18302D</color>
-    <color name="text_secondary">#667A77</color>
-    <color name="text_disabled">#9EAEAC</color>
-    <color name="border">#DCE9E6</color>
+    <color name="text_primary">#102A27</color>
+    <color name="text_secondary">#4B5E5A</color>
+    <color name="text_disabled">#9AA7A4</color>
+    <color name="border">#D8E5E1</color>
     
     <!-- Status Colors -->
     <color name="status_protected_bg">#E9F8F5</color>
