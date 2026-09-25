@@ -9,7 +9,9 @@ sealed class Screen(val route: String) {
     object AddNumber : Screen("add_number")
     object Protections : Screen("protections")
     object ProtectionRequests : Screen("protection_requests")
-    object CreateProtectionRequest : Screen("create_protection_request")
+    object CreateProtectionRequest : Screen("create_protection_request") {
+        fun createRoute(numberId: String? = null) = if (!numberId.isNullOrBlank()) "client/create_request?numberId=$numberId" else "create_protection_request"
+    }
     object Notifications : Screen("notifications")
     object Settings : Screen("settings")
     object Help : Screen("help")
