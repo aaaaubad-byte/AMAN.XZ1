@@ -18,12 +18,16 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             AmanTheme {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = BackgroundLight
+                androidx.compose.runtime.CompositionLocalProvider(
+                    androidx.compose.ui.platform.LocalLayoutDirection provides androidx.compose.ui.unit.LayoutDirection.Rtl
                 ) {
-                    val navController = rememberNavController()
-                    AmanNavGraph(navController = navController)
+                    Surface(
+                        modifier = Modifier.fillMaxSize(),
+                        color = BackgroundLight
+                    ) {
+                        val navController = rememberNavController()
+                        AmanNavGraph(navController = navController)
+                    }
                 }
             }
         }
