@@ -743,21 +743,12 @@ END $$;
 -- =============================================================
 -- Grants for app access
 -- =============================================================
-GRANT USAGE ON SCHEMA public TO anon;
-GRANT USAGE ON SCHEMA public TO authenticated;
+GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO service_role;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO service_role;
 
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.users TO anon;
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.customer_numbers TO anon;
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.telecom_providers TO anon;
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.telecom_prefixes TO anon;
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.protection_plans TO anon;
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.payment_methods TO anon;
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.protection_requests TO anon;
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.protections TO anon;
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.payment_tasks TO anon;
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.task_settings TO anon;
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.notifications TO anon;
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.audit_logs TO anon;
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.system_settings TO anon;
+GRANT SELECT ON public.telecom_providers, public.protection_plans, public.payment_methods, public.task_settings, public.system_settings TO anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.users, public.customer_numbers, public.protection_requests, public.protections, public.payment_tasks, public.notifications, public.audit_logs TO service_role;
+GRANT SELECT, INSERT, UPDATE ON public.users, public.customer_numbers, public.protection_requests, public.protections, public.payment_tasks, public.notifications TO authenticated;
 
 COMMIT;

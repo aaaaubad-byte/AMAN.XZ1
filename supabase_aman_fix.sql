@@ -594,4 +594,13 @@ BEGIN
     END IF;
 END $$;
 
+-- Required privileges for both direct server access and app access.
+GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO service_role;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO service_role;
+
+GRANT SELECT ON public.telecom_providers, public.protection_plans, public.payment_methods, public.task_settings, public.system_settings TO anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.users, public.customer_numbers, public.protection_requests, public.protections, public.payment_tasks, public.notifications, public.audit_logs TO service_role;
+GRANT SELECT, INSERT, UPDATE ON public.users, public.customer_numbers, public.protection_requests, public.protections, public.payment_tasks, public.notifications TO authenticated;
+
 COMMIT;
