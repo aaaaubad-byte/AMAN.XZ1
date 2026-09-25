@@ -166,6 +166,7 @@ fun AdminPaymentTasksScreen(
                                 items(state.filteredTasks) { task ->
                                     AdminTaskCard(
                                         task = task,
+                                        onClick = { onNavigate(Screen.AdminPaymentTaskDetail.createRoute(task.id)) },
                                         onComplete = { viewModel.completeTask(task.id) },
                                         onCancel = {
                                             cancellingTaskId = task.id
@@ -274,6 +275,7 @@ fun AdminPaymentTasksScreen(
 @Composable
 fun AdminTaskCard(
     task: PaymentTask,
+    onClick: () -> Unit = {},
     onComplete: () -> Unit,
     onCancel: () -> Unit,
     onReschedule: () -> Unit

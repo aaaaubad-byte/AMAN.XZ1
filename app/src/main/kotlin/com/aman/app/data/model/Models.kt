@@ -535,5 +535,6 @@ data class CustomerDetails(
     val user: AppUser,
     val numbers: List<CustomerNumber> = emptyList(),
     val requests: List<ProtectionRequest> = emptyList(),
-    val protections: List<Protection> = emptyList()
+    val protections: List<Protection> = emptyList(),
+    val tasks: List<PaymentTask> = emptyList()
 )

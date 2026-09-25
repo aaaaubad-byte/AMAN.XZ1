@@ -9,6 +9,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.PhoneIphone
 import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.Checklist
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -221,6 +222,50 @@ fun AdminCustomerDetailsScreen(
                                             }
                                         }
                                         StatusBadge(status = req.status.name)
+                                    }
+                                }
+                            }
+                        }
+
+                        // Associated Tasks
+                        item {
+                            Text(
+                                text = "مهام السداد والمتابعة (" + state.details.tasks.size + ")",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 15.sp,
+                                color = TextPrimary
+                            )
+                        }
+
+                        if (state.details.tasks.isEmpty()) {
+                            item {
+                                AmanCard {
+                                    Text("لا توجد مهام سداد مسجلة لهذا العميل حالياً", color = TextSecondary, fontSize = 13.sp)
+                                }
+                            }
+                        } else {
+                            items(state.details.tasks) { task ->
+                                Card(
+                                    shape = RoundedCornerShape(10.dp),
+                                    colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(12.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Icon(Icons.Default.Checklist, contentDescription = null, tint = Primary)
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Column {
+                                                Text("مهمة سداد #" + task.id.take(8).uppercase(), fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                                Text("المبلغ: " + task.amount + " ريال • الاستحقاق: " + task.dueDate.take(10), fontSize = 12.sp, color = TextSecondary)
+                                            }
+                                        }
+                                        StatusBadge(status = task.status.name)
                                     }
                                 }
                             }

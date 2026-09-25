@@ -153,12 +153,21 @@ class AdminRepositoryImpl : AdminRepository {
                 .select { filter { eq("customer_id", customerId) } }
                 .decodeList<Protection>()
 
+            val tasks = try {
+                AmanSupabase.postgrest.from("payment_tasks")
+                    .select { filter { eq("customer_id", customerId) } }
+                    .decodeList<PaymentTask>()
+            } catch (e: Exception) {
+                emptyList()
+            }
+
             AmanResult.Success(
                 CustomerDetails(
                     user = user,
                     numbers = numbers,
                     requests = requests,
-                    protections = protections
+                    protections = protections,
+                    tasks = tasks
                 )
             )
         } catch (e: Exception) {

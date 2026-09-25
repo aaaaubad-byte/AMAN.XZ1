@@ -214,7 +214,35 @@ fun AdminDrawerContent(
                 color = BorderColor
             )
 
-            // Logout / Return to Customer Mode
+            // Switch to Client Mode
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 2.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .clickable {
+                        onNavigate(Screen.ClientHome.route)
+                        onCloseDrawer()
+                    }
+                    .padding(horizontal = 14.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Home,
+                    contentDescription = null,
+                    tint = Primary,
+                    modifier = Modifier.size(22.dp)
+                )
+                Spacer(modifier = Modifier.width(14.dp))
+                Text(
+                    text = "التبديل إلى واجهة العميل",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = Primary
+                )
+            }
+
+            // Logout
             Row(
                 modifier = Modifier
                     .fillMaxWidth()

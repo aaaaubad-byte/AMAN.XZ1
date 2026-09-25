@@ -39,6 +39,7 @@ fun AdminProtectionsScreen(
     val uiState by viewModel.uiState.collectAsState()
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
+    var selectedProtection by remember { mutableStateOf<Protection?>(null) }
 
     LaunchedEffect(Unit) {
         viewModel.loadProtections()
@@ -166,11 +167,98 @@ fun AdminProtectionsScreen(
                                 verticalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
                                 items(state.filteredProtections) { prot ->
-                                    AdminProtectionItemCard(prot = prot)
+                                    AdminProtectionItemCard(
+                                        prot = prot,
+                                        onClick = { selectedProtection = prot }
+                                    )
                                 }
                             }
                         }
                     }
+                }
+
+                // Protection Details Dialog
+                selectedProtection?.let { prot ->
+                    val displayStatus = prot.calculateDisplayStatus()
+                    val daysRemaining = prot.daysRemaining()
+                    AlertDialog(
+                        onDismissRequest = { selectedProtection = null },
+                        title = {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "تفاصيل الحماية",
+                                    fontWeight = FontWeight.Bold,
+                                    color = TextPrimary
+                                )
+                                StatusBadge(status = displayStatus.name)
+                            }
+                        },
+                        text = {
+                            Column(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                    Text("رقم الوثيقة:", fontSize = 12.sp, color = TextSecondary)
+                                    Text("#PROT-" + prot.id.take(8).uppercase(), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                                }
+                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                    Text("رقم الهاتف المحمي:", fontSize = 12.sp, color = TextSecondary)
+                                    Text(prot.customerNumber?.phoneNumber ?: "-", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Primary)
+                                }
+                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                    Text("الشركة المشغلة:", fontSize = 12.sp, color = TextSecondary)
+                                    Text(prot.provider?.name ?: "-", fontSize = 12.sp, color = TextPrimary)
+                                }
+                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                    Text("باقة الحماية:", fontSize = 12.sp, color = TextSecondary)
+                                    Text(prot.plan?.name ?: "-", fontSize = 12.sp, color = TextPrimary)
+                                }
+                                HorizontalDivider(color = BorderColor)
+                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                    Text("تاريخ بدء الحماية:", fontSize = 12.sp, color = TextSecondary)
+                                    Text(prot.startDate.take(10), fontSize = 12.sp, color = TextPrimary)
+                                }
+                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                    Text("تاريخ انتهاء الحماية:", fontSize = 12.sp, color = TextSecondary)
+                                    Text(prot.endDate.take(10), fontSize = 12.sp, color = TextPrimary)
+                                }
+                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                    Text("المدة المعتمدة:", fontSize = 12.sp, color = TextSecondary)
+                                    Text("" + prot.durationAtPurchase + " يوم", fontSize = 12.sp, color = TextPrimary)
+                                }
+                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                    Text("الأيام المتبقية:", fontSize = 12.sp, color = TextSecondary)
+                                    Text("" + daysRemaining + " يوم", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = if (daysRemaining <= 5) MaterialTheme.colorScheme.error else Primary)
+                                }
+                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                    Text("القيمة التاريخية:", fontSize = 12.sp, color = TextSecondary)
+                                    Text("" + prot.priceAtPurchase + " ريال", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                                }
+                            }
+                        },
+                        confirmButton = {
+                            Button(
+                                onClick = {
+                                    val custId = prot.customerId
+                                    selectedProtection = null
+                                    onNavigate(Screen.AdminCustomerDetails.createRoute(custId))
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = Primary)
+                            ) {
+                                Text("عرض ملف العميل", color = SurfaceWhite)
+                            }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = { selectedProtection = null }) {
+                                Text("إغلاق", color = TextSecondary)
+                            }
+                        }
+                    )
                 }
             }
         }
@@ -178,11 +266,14 @@ fun AdminProtectionsScreen(
 }
 
 @Composable
-fun AdminProtectionItemCard(prot: Protection) {
+fun AdminProtectionItemCard(
+    prot: Protection,
+    onClick: () -> Unit = {}
+) {
     val displayStatus = prot.calculateDisplayStatus()
     val daysRemaining = prot.daysRemaining()
 
-    AmanCard {
+    AmanCard(modifier = Modifier.clickable { onClick() }) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
