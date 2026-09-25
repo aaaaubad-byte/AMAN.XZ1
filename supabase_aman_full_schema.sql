@@ -746,9 +746,213 @@ END $$;
 GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
 GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO service_role;
 GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO service_role;
+GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO anon, authenticated, service_role;
 
 GRANT SELECT ON public.telecom_providers, public.protection_plans, public.payment_methods, public.task_settings, public.system_settings TO anon, authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.users, public.customer_numbers, public.protection_requests, public.protections, public.payment_tasks, public.notifications, public.audit_logs TO service_role;
 GRANT SELECT, INSERT, UPDATE ON public.users, public.customer_numbers, public.protection_requests, public.protections, public.payment_tasks, public.notifications TO authenticated;
+
+-- =============================================================
+-- Runtime contract fixes for current live database
+-- =============================================================
+ALTER TABLE public.customer_numbers
+    ADD COLUMN IF NOT EXISTS protection_status text DEFAULT 'unprotected';
+
+UPDATE public.customer_numbers
+SET protection_status = 'unprotected'
+WHERE protection_status IS NULL;
+
+ALTER TABLE public.customer_numbers
+    ALTER COLUMN protection_status SET DEFAULT 'unprotected';
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'customer_numbers_protection_status_check'
+    ) THEN
+        ALTER TABLE public.customer_numbers
+            ADD CONSTRAINT customer_numbers_protection_status_check
+            CHECK (protection_status IN ('unprotected', 'pending', 'protected'));
+    END IF;
+END $$;
+
+DROP FUNCTION IF EXISTS public.cancel_payment_task(uuid, text);
+DROP FUNCTION IF EXISTS public.reschedule_payment_task(uuid, timestamptz, text);
+DROP FUNCTION IF EXISTS public.admin_set_telecom_provider_status(uuid, boolean);
+DROP FUNCTION IF EXISTS public.admin_update_protection_plan(uuid, uuid, text, numeric, integer, boolean, boolean);
+DROP FUNCTION IF EXISTS public.admin_set_protection_plan_status(uuid, boolean);
+DROP FUNCTION IF EXISTS public.admin_update_payment_method(uuid, text, text, text, text, boolean);
+DROP FUNCTION IF EXISTS public.admin_set_payment_method_status(uuid, boolean);
+
+CREATE OR REPLACE FUNCTION public.cancel_payment_task(p_task_id uuid, p_reason text)
+RETURNS void
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_task public.payment_tasks%ROWTYPE;
+BEGIN
+    SELECT * INTO v_task
+    FROM public.payment_tasks
+    WHERE id = p_task_id
+    FOR UPDATE;
+
+    IF v_task.id IS NULL THEN
+        RAISE EXCEPTION 'Payment task not found';
+    END IF;
+
+    UPDATE public.payment_tasks
+    SET status = 'cancelled',
+        cancelled_at = now(),
+        cancelled_by = auth.uid(),
+        cancellation_reason = p_reason,
+        updated_at = now()
+    WHERE id = p_task_id;
+
+    INSERT INTO public.audit_logs (action_type, affected_record_id, affected_table, details)
+    VALUES (
+        'cancel_payment_task',
+        p_task_id,
+        'payment_tasks',
+        jsonb_build_object('reason', p_reason)
+    );
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.reschedule_payment_task(p_task_id uuid, p_new_due_date timestamptz, p_reason text)
+RETURNS void
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_task public.payment_tasks%ROWTYPE;
+BEGIN
+    SELECT * INTO v_task
+    FROM public.payment_tasks
+    WHERE id = p_task_id
+    FOR UPDATE;
+
+    IF v_task.id IS NULL THEN
+        RAISE EXCEPTION 'Payment task not found';
+    END IF;
+
+    UPDATE public.payment_tasks
+    SET previous_due_date = due_date,
+        due_date = p_new_due_date,
+        status = 'upcoming',
+        rescheduled_at = now(),
+        rescheduled_by = auth.uid(),
+        reschedule_reason = p_reason,
+        updated_at = now()
+    WHERE id = p_task_id;
+
+    INSERT INTO public.audit_logs (action_type, affected_record_id, affected_table, details)
+    VALUES (
+        'reschedule_payment_task',
+        p_task_id,
+        'payment_tasks',
+        jsonb_build_object('new_due_date', p_new_due_date, 'reason', p_reason)
+    );
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.admin_set_telecom_provider_status(p_provider_id uuid, p_is_active boolean)
+RETURNS void
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    UPDATE public.telecom_providers
+    SET is_active = p_is_active,
+        updated_at = now()
+    WHERE id = p_provider_id;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.admin_update_protection_plan(
+    p_plan_id uuid,
+    p_provider_id uuid,
+    p_name text,
+    p_price numeric,
+    p_duration_days integer,
+    p_is_active boolean,
+    p_is_visible_to_customers boolean
+)
+RETURNS public.protection_plans
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_row public.protection_plans%ROWTYPE;
+BEGIN
+    UPDATE public.protection_plans
+    SET provider_id = p_provider_id,
+        name = p_name,
+        price = p_price,
+        protection_duration_days = p_duration_days,
+        is_active = p_is_active,
+        is_visible_to_customers = p_is_visible_to_customers,
+        updated_at = now()
+    WHERE id = p_plan_id;
+
+    SELECT * INTO v_row
+    FROM public.protection_plans
+    WHERE id = p_plan_id;
+
+    RETURN v_row;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.admin_set_protection_plan_status(p_plan_id uuid, p_is_active boolean)
+RETURNS void
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    UPDATE public.protection_plans
+    SET is_active = p_is_active,
+        updated_at = now()
+    WHERE id = p_plan_id;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.admin_update_payment_method(
+    p_payment_method_id uuid,
+    p_name text,
+    p_account_number text,
+    p_account_owner_name text,
+    p_payment_instructions text,
+    p_is_active boolean
+)
+RETURNS public.payment_methods
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_row public.payment_methods%ROWTYPE;
+BEGIN
+    UPDATE public.payment_methods
+    SET name = p_name,
+        account_number = p_account_number,
+        account_owner_name = p_account_owner_name,
+        payment_instructions = p_payment_instructions,
+        is_active = p_is_active,
+        updated_at = now()
+    WHERE id = p_payment_method_id;
+
+    SELECT * INTO v_row
+    FROM public.payment_methods
+    WHERE id = p_payment_method_id;
+
+    RETURN v_row;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.admin_set_payment_method_status(p_payment_method_id uuid, p_is_active boolean)
+RETURNS void
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    UPDATE public.payment_methods
+    SET is_active = p_is_active,
+        updated_at = now()
+    WHERE id = p_payment_method_id;
+END;
+$$;
 
 COMMIT;
