@@ -237,9 +237,21 @@ END;
 $$;
 
 -- =============================================================
+-- Drop existing matching functions if present so the migration can be re-run safely
+-- =============================================================
+DROP FUNCTION IF EXISTS public.reject_protection_request(uuid, text);
+DROP FUNCTION IF EXISTS public.approve_protection_request(uuid);
+DROP FUNCTION IF EXISTS public.complete_payment_task(uuid);
+DROP FUNCTION IF EXISTS public.admin_create_telecom_provider(text, text, integer, boolean, boolean, integer);
+DROP FUNCTION IF EXISTS public.admin_update_telecom_provider(uuid, text, text, integer, text[], boolean, boolean, integer);
+DROP FUNCTION IF EXISTS public.admin_create_protection_plan(uuid, text, numeric, integer, boolean, boolean);
+DROP FUNCTION IF EXISTS public.admin_create_payment_method(text, text, text, text, boolean);
+DROP FUNCTION IF EXISTS public.get_provider_by_prefix(text);
+
+-- =============================================================
 -- RPC: approve_protection_request
 -- =============================================================
-CREATE OR REPLACE FUNCTION public.approve_protection_request(p_request_id uuid)
+CREATE FUNCTION public.approve_protection_request(p_request_id uuid)
 RETURNS public.protections
 LANGUAGE plpgsql
 AS $$
@@ -305,7 +317,7 @@ $$;
 -- =============================================================
 -- RPC: reject_protection_request
 -- =============================================================
-CREATE OR REPLACE FUNCTION public.reject_protection_request(p_request_id uuid, p_reason text)
+CREATE FUNCTION public.reject_protection_request(p_request_id uuid, p_reason text)
 RETURNS void
 LANGUAGE plpgsql
 AS $$
@@ -335,7 +347,7 @@ $$;
 -- =============================================================
 -- RPC: complete_payment_task
 -- =============================================================
-CREATE OR REPLACE FUNCTION public.complete_payment_task(p_task_id uuid)
+CREATE FUNCTION public.complete_payment_task(p_task_id uuid)
 RETURNS public.payment_tasks
 LANGUAGE plpgsql
 AS $$
@@ -374,7 +386,7 @@ $$;
 -- =============================================================
 -- Other admin CRUD helpers
 -- =============================================================
-CREATE OR REPLACE FUNCTION public.admin_create_telecom_provider(
+CREATE FUNCTION public.admin_create_telecom_provider(
     p_name text,
     p_code text,
     p_phone_length integer,
@@ -400,7 +412,7 @@ BEGIN
 END;
 $$;
 
-CREATE OR REPLACE FUNCTION public.admin_update_telecom_provider(
+CREATE FUNCTION public.admin_update_telecom_provider(
     p_provider_id uuid,
     p_name text,
     p_code text,
@@ -445,7 +457,7 @@ BEGIN
 END;
 $$;
 
-CREATE OR REPLACE FUNCTION public.admin_create_protection_plan(
+CREATE FUNCTION public.admin_create_protection_plan(
     p_provider_id uuid,
     p_name text,
     p_price numeric,
@@ -471,7 +483,7 @@ BEGIN
 END;
 $$;
 
-CREATE OR REPLACE FUNCTION public.admin_create_payment_method(
+CREATE FUNCTION public.admin_create_payment_method(
     p_name text,
     p_account_number text,
     p_account_owner_name text,
