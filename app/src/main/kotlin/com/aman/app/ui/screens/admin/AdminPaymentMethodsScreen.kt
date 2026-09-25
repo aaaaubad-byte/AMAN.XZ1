@@ -142,7 +142,8 @@ fun AdminPaymentMethodsScreen(
                                         holderName = method.accountOwnerName
                                         instructions = method.paymentInstructions ?: ""
                                     },
-                                    onDisable = { viewModel.disableMethod(method.id) }
+                                    onDisable = { viewModel.disableMethod(method.id) },
+                                    onActivate = { viewModel.activateMethod(method.id) }
                                 )
                             }
                         }
@@ -242,7 +243,8 @@ fun AdminPaymentMethodsScreen(
 fun AdminPaymentMethodCard(
     method: PaymentMethod,
     onEdit: () -> Unit,
-    onDisable: () -> Unit
+    onDisable: () -> Unit,
+    onActivate: () -> Unit
 ) {
     AmanCard {
         Row(
@@ -310,6 +312,14 @@ fun AdminPaymentMethodCard(
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
                 ) {
                     Text("تعطيل")
+                }
+            } else {
+                Button(
+                    onClick = onActivate,
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.buttonColors(containerColor = Primary)
+                ) {
+                    Text("تفعيل", color = SurfaceWhite)
                 }
             }
         }

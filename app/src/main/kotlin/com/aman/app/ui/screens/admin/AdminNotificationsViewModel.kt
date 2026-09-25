@@ -46,4 +46,19 @@ class AdminNotificationsViewModel(
             }
         }
     }
+
+    fun markAsRead(notificationId: String) {
+        viewModelScope.launch {
+            when (val res = adminRepo.markNotificationAsRead(notificationId)) {
+                is AmanResult.Success -> {
+                    val currentContent = _uiState.value as? AdminNotificationsUiState.Content ?: return@launch
+                    val updated = currentContent.notifications.map {
+                        if (it.id == notificationId) it.copy(isRead = true) else it
+                    }
+                    _uiState.value = currentContent.copy(notifications = updated)
+                }
+                is AmanResult.Error -> {}
+            }
+        }
+    }
 }

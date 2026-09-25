@@ -10,6 +10,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Assignment
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -107,6 +108,18 @@ fun AdminProtectionRequestsScreen(
                         }
                     }
                     is AdminProtectionRequestsUiState.Content -> {
+                        OutlinedTextField(
+                            value = state.searchQuery,
+                            onValueChange = { viewModel.setSearchQuery(it) },
+                            modifier = Modifier.fillMaxWidth(),
+                            placeholder = { Text("بحث بالعميل أو رقم الهاتف أو رقم الطلب أو المشغل...") },
+                            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = TextSecondary) },
+                            singleLine = true,
+                            shape = RoundedCornerShape(12.dp)
+                        )
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
                         // Status Filter Chips
                         val filters = listOf(
                             null to "الكل (${state.allRequests.size})",
@@ -156,7 +169,7 @@ fun AdminProtectionRequestsScreen(
                                     )
                                     Spacer(modifier = Modifier.height(8.dp))
                                     Text(
-                                        text = "لا توجد طلبات حماية في هذا التبويب",
+                                        text = if (state.searchQuery.isBlank()) "لا توجد طلبات حماية في هذا التبويب" else "لا توجد نتائج مطابقة للبحث",
                                         color = TextSecondary,
                                         fontSize = 14.sp
                                     )
@@ -167,9 +180,10 @@ fun AdminProtectionRequestsScreen(
                                 modifier = Modifier.weight(1f),
                                 verticalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
-                                items(state.filteredRequests) { req ->
+                                items(state.filteredRequests, key = { it.id }) { req ->
                                     AdminProtectionRequestItemCard(
                                         request = req,
+                                        onClick = { onNavigate(Screen.AdminProtectionRequestDetail.createRoute(req.id)) },
                                         onApprove = { viewModel.approveRequest(req.id) },
                                         onReject = {
                                             rejectingRequestId = req.id
@@ -241,10 +255,13 @@ fun AdminProtectionRequestsScreen(
 @Composable
 fun AdminProtectionRequestItemCard(
     request: ProtectionRequest,
+    onClick: () -> Unit = {},
     onApprove: () -> Unit,
     onReject: () -> Unit
 ) {
-    AmanCard {
+    AmanCard(
+        modifier = Modifier.clickable { onClick() }
+    ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,

@@ -136,7 +136,7 @@ fun AdminCustomerNumbersScreen(
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .clickable {
-                                                onNavigate(Screen.AdminCustomerDetails.createRoute(number.customerId))
+                                                onNavigate(Screen.AdminCustomerNumberDetail.createRoute(number.id))
                                             },
                                         shape = RoundedCornerShape(12.dp),
                                         colors = CardDefaults.cardColors(containerColor = SurfaceWhite),

@@ -538,3 +538,14 @@ data class CustomerDetails(
     val protections: List<Protection> = emptyList(),
     val tasks: List<PaymentTask> = emptyList()
 )
+
+@Serializable
+data class CustomerNumberDetails(
+    val number: CustomerNumber,
+    val customer: AppUser? = null,
+    val provider: TelecomProvider? = null,
+    val currentProtection: Protection? = null,
+    val requests: List<ProtectionRequest> = emptyList(),
+    val tasks: List<PaymentTask> = emptyList()
+)
+

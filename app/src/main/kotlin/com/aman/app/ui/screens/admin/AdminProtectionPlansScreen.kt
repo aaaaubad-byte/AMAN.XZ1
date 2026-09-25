@@ -143,7 +143,9 @@ fun AdminProtectionPlansScreen(
                                         planPrice = plan.price.toString()
                                         planDuration = plan.durationDays.toString()
                                     },
-                                    onDisable = { viewModel.disablePlan(plan.id) }
+                                    onDisable = { viewModel.disablePlan(plan.id) },
+                                    onActivate = { viewModel.activatePlan(plan.id) },
+                                    onToggleVisibility = { viewModel.togglePlanVisibility(plan) }
                                 )
                             }
                         }
@@ -255,7 +257,9 @@ fun AdminPlanCard(
     plan: ProtectionPlan,
     providerName: String,
     onEdit: () -> Unit,
-    onDisable: () -> Unit
+    onDisable: () -> Unit,
+    onActivate: () -> Unit,
+    onToggleVisibility: () -> Unit
 ) {
     AmanCard {
         Row(
@@ -280,8 +284,42 @@ fun AdminPlanCard(
                 }
             }
 
-            Text("${plan.price} ريال", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = Primary)
+            Column(horizontalAlignment = Alignment.End) {
+                Text("${plan.price} ريال", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = Primary)
+                Spacer(modifier = Modifier.height(4.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(if (plan.isVisibleToCustomer) LightTeal else BackgroundLight)
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                    ) {
+                        Text(
+                            text = if (plan.isVisibleToCustomer) "ظاهرة للعملاء" else "مخفية",
+                            color = if (plan.isVisibleToCustomer) Primary else TextSecondary,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(if (plan.isActive) StatusProtectedBg else MaterialTheme.colorScheme.errorContainer)
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                    ) {
+                        Text(
+                            text = if (plan.isActive) "نشطة" else "معطلة",
+                            color = if (plan.isActive) StatusProtectedText else MaterialTheme.colorScheme.error,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
         }
+
+        Spacer(modifier = Modifier.height(8.dp))
 
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -292,7 +330,18 @@ fun AdminPlanCard(
                 modifier = Modifier.weight(1f),
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = Primary)
             ) {
-                Text("تعديل")
+                Text("تعديل", fontSize = 12.sp)
+            }
+
+            OutlinedButton(
+                onClick = onToggleVisibility,
+                modifier = Modifier.weight(1f),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = if (plan.isVisibleToCustomer) TextSecondary else Primary)
+            ) {
+                Text(
+                    text = if (plan.isVisibleToCustomer) "إخفاء عن العملاء" else "إظهار للعملاء",
+                    fontSize = 11.sp
+                )
             }
 
             if (plan.isActive) {
@@ -301,7 +350,15 @@ fun AdminPlanCard(
                     modifier = Modifier.weight(1f),
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
                 ) {
-                    Text("إيقاف")
+                    Text("إيقاف", fontSize = 12.sp)
+                }
+            } else {
+                Button(
+                    onClick = onActivate,
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.buttonColors(containerColor = Primary)
+                ) {
+                    Text("تفعيل", fontSize = 12.sp, color = SurfaceWhite)
                 }
             }
         }

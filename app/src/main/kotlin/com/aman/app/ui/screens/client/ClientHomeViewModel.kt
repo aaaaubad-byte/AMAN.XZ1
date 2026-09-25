@@ -3,6 +3,7 @@ package com.aman.app.ui.screens.client
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.aman.app.core.result.AmanResult
+import com.aman.app.data.model.AppNotification
 import com.aman.app.data.model.CustomerNumber
 import com.aman.app.data.model.Protection
 import com.aman.app.data.model.ProtectionDisplayStatus
@@ -26,7 +27,8 @@ sealed interface ClientHomeUiState {
         val expiredCount: Int,
         val pendingRequestsCount: Int,
         val unreadNotificationsCount: Int,
-        val renewalThresholdDays: Int
+        val renewalThresholdDays: Int,
+        val recentNotifications: List<AppNotification> = emptyList()
     ) : ClientHomeUiState
     data class Error(val message: String) : ClientHomeUiState
 }
@@ -66,13 +68,15 @@ class ClientHomeViewModel(
             val protectionsResult = protectionRepo.getCustomerProtections(customerId)
             val requestsResult = requestRepo.getCustomerRequests(customerId)
             val unreadCountResult = notificationRepo.getUnreadCount(customerId)
+            val notifsResult = notificationRepo.getNotifications(customerId)
 
             val numbers = if (numbersResult is AmanResult.Success) numbersResult.data else emptyList()
             val protections = if (protectionsResult is AmanResult.Success) protectionsResult.data else emptyList()
             val requests = if (requestsResult is AmanResult.Success) requestsResult.data else emptyList()
             val unreadCount = if (unreadCountResult is AmanResult.Success) unreadCountResult.data else 0
+            val recentNotifs = if (notifsResult is AmanResult.Success) notifsResult.data.take(3) else emptyList()
 
-            if (numbers.isEmpty() && protections.isEmpty() && requests.isEmpty()) {
+            if (numbers.isEmpty() && protections.isEmpty() && requests.isEmpty() && recentNotifs.isEmpty()) {
                 _uiState.value = ClientHomeUiState.Empty
             } else {
                 val activeCount = protections.count { it.calculateDisplayStatus(threshold) == ProtectionDisplayStatus.ACTIVE }
@@ -88,7 +92,8 @@ class ClientHomeViewModel(
                     expiredCount = expiredCount,
                     pendingRequestsCount = pendingRequestsCount,
                     unreadNotificationsCount = unreadCount,
-                    renewalThresholdDays = threshold
+                    renewalThresholdDays = threshold,
+                    recentNotifications = recentNotifs
                 )
             }
         }

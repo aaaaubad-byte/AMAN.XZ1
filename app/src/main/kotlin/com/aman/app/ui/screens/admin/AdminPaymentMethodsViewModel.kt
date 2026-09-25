@@ -93,4 +93,18 @@ class AdminPaymentMethodsViewModel(
             }
         }
     }
+
+    fun activateMethod(methodId: String) {
+        viewModelScope.launch {
+            when (val res = adminRepo.activatePaymentMethod(methodId)) {
+                is AmanResult.Success -> {
+                    _message.value = "تمت إعادة تفعيل وسيلة الدفع بنجاح"
+                    loadMethods()
+                }
+                is AmanResult.Error -> {
+                    _message.value = "تعذر تفعيل وسيلة الدفع: ${res.error.message}"
+                }
+            }
+        }
+    }
 }

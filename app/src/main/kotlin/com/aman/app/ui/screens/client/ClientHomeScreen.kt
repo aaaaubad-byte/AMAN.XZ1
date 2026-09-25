@@ -21,6 +21,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.aman.app.data.model.AppNotification
 import com.aman.app.data.model.CustomerNumber
 import com.aman.app.data.model.NumberProtectionStatus
 import com.aman.app.data.model.Protection
@@ -330,6 +331,45 @@ fun ClientHomeScreen(
                             }
                         }
 
+                        // Latest Notifications Section Header
+                        item {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "آخر الإشعارات",
+                                    style = MaterialTheme.typography.titleMedium.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        color = TextPrimary
+                                    )
+                                )
+                                TextButton(onClick = onNavigateToNotifications) {
+                                    Text("عرض الكل", color = Primary, fontSize = 13.sp)
+                                }
+                            }
+                        }
+
+                        // Recent Notifications List
+                        if (state.recentNotifications.isEmpty()) {
+                            item {
+                                AmanCard {
+                                    Text(
+                                        text = "لا توجد إشعارات جديدة",
+                                        style = MaterialTheme.typography.bodyMedium.copy(color = TextSecondary)
+                                    )
+                                }
+                            }
+                        } else {
+                            items(state.recentNotifications) { notif ->
+                                HomeNotificationItem(
+                                    notification = notif,
+                                    onClick = onNavigateToNotifications
+                                )
+                            }
+                        }
+
                         item {
                             Spacer(modifier = Modifier.height(72.dp))
                         }
@@ -445,6 +485,59 @@ private fun HomeProtectionItem(
                     Text("تجديد الحماية الآن", fontSize = 13.sp)
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun HomeNotificationItem(
+    notification: AppNotification,
+    onClick: () -> Unit
+) {
+    AmanCard(
+        modifier = Modifier.clickable { onClick() }
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .background(if (notification.isRead) BackgroundLight else Primary.copy(alpha = 0.1f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Notifications,
+                    contentDescription = null,
+                    tint = if (notification.isRead) TextSecondary else Primary,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = notification.title,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 13.sp,
+                    color = TextPrimary
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = notification.message,
+                    fontSize = 12.sp,
+                    color = TextSecondary,
+                    maxLines = 1
+                )
+            }
+
+            Text(
+                text = notification.createdAt?.take(10) ?: "",
+                fontSize = 11.sp,
+                color = TextSecondary
+            )
         }
     }
 }

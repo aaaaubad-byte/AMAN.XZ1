@@ -29,6 +29,7 @@ interface AdminRepository {
 
     // 3. Protection Requests
     suspend fun getProtectionRequests(status: ProtectionRequestStatus? = null): AmanResult<List<ProtectionRequest>>
+    suspend fun getProtectionRequest(requestId: String): AmanResult<ProtectionRequest?>
     suspend fun approveProtectionRequest(requestId: String): AmanResult<Protection>
     suspend fun rejectProtectionRequest(requestId: String, reason: String): AmanResult<Unit>
 
@@ -40,18 +41,27 @@ interface AdminRepository {
     suspend fun createProvider(name: String, code: String, length: Int, order: Int): AmanResult<TelecomProvider>
     suspend fun updateProvider(provider: TelecomProvider): AmanResult<TelecomProvider>
     suspend fun disableProvider(providerId: String): AmanResult<Unit>
+    suspend fun activateProvider(providerId: String): AmanResult<Unit>
+    suspend fun setProviderVisibility(providerId: String, isVisible: Boolean): AmanResult<Unit>
+    suspend fun getProviderPrefixes(providerId: String): AmanResult<List<TelecomPrefix>>
+    suspend fun addProviderPrefix(providerId: String, prefix: String): AmanResult<TelecomPrefix>
+    suspend fun updateProviderPrefix(prefixId: String, prefix: String, isActive: Boolean): AmanResult<TelecomPrefix>
+    suspend fun setPrefixStatus(prefixId: String, isActive: Boolean): AmanResult<Unit>
 
     // 6. Protection Plans
     suspend fun getAllPlans(): AmanResult<List<ProtectionPlan>>
     suspend fun createPlan(providerId: String, name: String, price: Double, durationDays: Int): AmanResult<ProtectionPlan>
     suspend fun updatePlan(plan: ProtectionPlan): AmanResult<ProtectionPlan>
     suspend fun disablePlan(planId: String): AmanResult<Unit>
+    suspend fun activatePlan(planId: String): AmanResult<Unit>
+    suspend fun setPlanVisibility(planId: String, isVisible: Boolean): AmanResult<Unit>
 
     // 7. Payment Methods
     suspend fun getAllPaymentMethods(): AmanResult<List<PaymentMethod>>
     suspend fun createPaymentMethod(walletName: String, accountNumber: String, holderName: String, instructions: String?): AmanResult<PaymentMethod>
     suspend fun updatePaymentMethod(method: PaymentMethod): AmanResult<PaymentMethod>
     suspend fun disablePaymentMethod(methodId: String): AmanResult<Unit>
+    suspend fun activatePaymentMethod(methodId: String): AmanResult<Unit>
 
     // 8. Payment Tasks
     suspend fun getAllTasks(status: TaskStatus? = null): AmanResult<List<PaymentTask>>
@@ -69,12 +79,16 @@ interface AdminRepository {
 
     // 11. Audit Logs
     suspend fun getAuditLogs(): AmanResult<List<AuditLog>>
+    suspend fun getAuditLog(logId: String): AmanResult<AuditLog?>
 
     // 12. Customer Numbers (Admin Management)
     suspend fun getAllCustomerNumbers(): AmanResult<List<CustomerNumber>>
+    suspend fun getCustomerNumberDetails(numberId: String): AmanResult<CustomerNumberDetails>
 
     // 13. System Notifications (Admin Overview)
     suspend fun getAllNotifications(): AmanResult<List<AppNotification>>
+    suspend fun getNotification(notificationId: String): AmanResult<AppNotification?>
+    suspend fun markNotificationAsRead(notificationId: String): AmanResult<Unit>
 }
 
 class AdminRepositoryImpl : AdminRepository {
@@ -190,6 +204,58 @@ class AdminRepositoryImpl : AdminRepository {
             AmanResult.Success(list)
         } catch (e: Exception) {
             AmanResult.Error(AmanError.DatabaseError("تعذر جلب طلبات الحماية: ${e.message}", cause = e))
+        }
+    }
+
+    override suspend fun getProtectionRequest(requestId: String): AmanResult<ProtectionRequest?> {
+        if (!AmanSupabase.isConfigured()) return AmanResult.Error(AmanError.ConfigurationError("Supabase غير مهيأ"))
+        return try {
+            val record = AmanSupabase.postgrest.from("protection_requests")
+                .select {
+                    filter { eq("id", requestId) }
+                }.decodeSingleOrNull<ProtectionRequest>() ?: return AmanResult.Success(null)
+
+            val number = try {
+                AmanSupabase.postgrest.from("customer_numbers")
+                    .select { filter { eq("id", record.customerNumberId) } }
+                    .decodeSingleOrNull<CustomerNumber>()
+            } catch (_: Exception) { null }
+
+            val plan = try {
+                AmanSupabase.postgrest.from("protection_plans")
+                    .select { filter { eq("id", record.planId) } }
+                    .decodeSingleOrNull<ProtectionPlan>()
+            } catch (_: Exception) { null }
+
+            val provider = try {
+                AmanSupabase.postgrest.from("telecom_providers")
+                    .select { filter { eq("id", record.providerId) } }
+                    .decodeSingleOrNull<TelecomProvider>()
+            } catch (_: Exception) { null }
+
+            val paymentMethod = try {
+                AmanSupabase.postgrest.from("payment_methods")
+                    .select { filter { eq("id", record.paymentMethodId) } }
+                    .decodeSingleOrNull<PaymentMethod>()
+            } catch (_: Exception) { null }
+
+            val customer = try {
+                AmanSupabase.postgrest.from("users")
+                    .select { filter { eq("id", record.customerId) } }
+                    .decodeSingleOrNull<AppUser>()
+            } catch (_: Exception) { null }
+
+            AmanResult.Success(
+                record.copy(
+                    customerNumber = number,
+                    plan = plan,
+                    provider = provider,
+                    paymentMethod = paymentMethod,
+                    actorName = customer?.name ?: customer?.email ?: record.actorName
+                )
+            )
+        } catch (e: Exception) {
+            AmanResult.Error(AmanError.DatabaseError("تعذر جلب تفاصيل طلب الحماية: ${e.message}", cause = e))
         }
     }
 
@@ -327,6 +393,103 @@ class AdminRepositoryImpl : AdminRepository {
         }
     }
 
+    override suspend fun activateProvider(providerId: String): AmanResult<Unit> {
+        if (!AmanSupabase.isConfigured()) return AmanResult.Error(AmanError.ConfigurationError("Supabase غير مهيأ"))
+        return try {
+            val params = buildJsonObject {
+                put("p_provider_id", providerId)
+                put("p_is_active", true)
+            }
+            AmanSupabase.postgrest.rpc(
+                function = "admin_set_telecom_provider_status",
+                parameters = params
+            )
+            AmanResult.Success(Unit)
+        } catch (e: Exception) {
+            AmanResult.Error(AmanError.DatabaseError("تعذر تفعيل الشركة: ${e.message}", cause = e))
+        }
+    }
+
+    override suspend fun setProviderVisibility(providerId: String, isVisible: Boolean): AmanResult<Unit> {
+        if (!AmanSupabase.isConfigured()) return AmanResult.Error(AmanError.ConfigurationError("Supabase غير مهيأ"))
+        return try {
+            AmanSupabase.postgrest.from("telecom_providers").update(
+                buildJsonObject {
+                    put("is_visible_to_customers", isVisible)
+                }
+            ) {
+                filter { eq("id", providerId) }
+            }
+            AmanResult.Success(Unit)
+        } catch (e: Exception) {
+            AmanResult.Error(AmanError.DatabaseError("تعذر تحديث ظهور الشركة: ${e.message}", cause = e))
+        }
+    }
+
+    override suspend fun getProviderPrefixes(providerId: String): AmanResult<List<TelecomPrefix>> {
+        if (!AmanSupabase.isConfigured()) return AmanResult.Error(AmanError.ConfigurationError("Supabase غير مهيأ"))
+        return try {
+            val list = AmanSupabase.postgrest.from("telecom_prefixes")
+                .select {
+                    filter { eq("provider_id", providerId) }
+                }.decodeList<TelecomPrefix>()
+            AmanResult.Success(list)
+        } catch (e: Exception) {
+            AmanResult.Error(AmanError.DatabaseError("تعذر جلب البادئات: ${e.message}", cause = e))
+        }
+    }
+
+    override suspend fun addProviderPrefix(providerId: String, prefix: String): AmanResult<TelecomPrefix> {
+        if (!AmanSupabase.isConfigured()) return AmanResult.Error(AmanError.ConfigurationError("Supabase غير مهيأ"))
+        if (prefix.isBlank()) return AmanResult.Error(AmanError.ValidationError("يجب إدخال البادئة"))
+        return try {
+            val res = AmanSupabase.postgrest.from("telecom_prefixes").insert(
+                buildJsonObject {
+                    put("provider_id", providerId)
+                    put("prefix", prefix.trim())
+                    put("is_active", true)
+                }
+            ) { select() }.decodeSingle<TelecomPrefix>()
+            AmanResult.Success(res)
+        } catch (e: Exception) {
+            AmanResult.Error(AmanError.DatabaseError("تعذر إضافة البادئة: ${e.message}", cause = e))
+        }
+    }
+
+    override suspend fun updateProviderPrefix(prefixId: String, prefix: String, isActive: Boolean): AmanResult<TelecomPrefix> {
+        if (!AmanSupabase.isConfigured()) return AmanResult.Error(AmanError.ConfigurationError("Supabase غير مهيأ"))
+        return try {
+            val res = AmanSupabase.postgrest.from("telecom_prefixes").update(
+                buildJsonObject {
+                    put("prefix", prefix.trim())
+                    put("is_active", isActive)
+                }
+            ) {
+                filter { eq("id", prefixId) }
+                select()
+            }.decodeSingle<TelecomPrefix>()
+            AmanResult.Success(res)
+        } catch (e: Exception) {
+            AmanResult.Error(AmanError.DatabaseError("تعذر تعديل البادئة: ${e.message}", cause = e))
+        }
+    }
+
+    override suspend fun setPrefixStatus(prefixId: String, isActive: Boolean): AmanResult<Unit> {
+        if (!AmanSupabase.isConfigured()) return AmanResult.Error(AmanError.ConfigurationError("Supabase غير مهيأ"))
+        return try {
+            AmanSupabase.postgrest.from("telecom_prefixes").update(
+                buildJsonObject {
+                    put("is_active", isActive)
+                }
+            ) {
+                filter { eq("id", prefixId) }
+            }
+            AmanResult.Success(Unit)
+        } catch (e: Exception) {
+            AmanResult.Error(AmanError.DatabaseError("تعذر تحديث حالة البادئة: ${e.message}", cause = e))
+        }
+    }
+
     // -----------------------------------------------------------------------
     // 6. باقات الحماية (Protection Plans)
     // -----------------------------------------------------------------------
@@ -398,6 +561,39 @@ class AdminRepositoryImpl : AdminRepository {
             AmanResult.Success(Unit)
         } catch (e: Exception) {
             AmanResult.Error(AmanError.DatabaseError("تعذر تعطيل الباقة: ${e.message}", cause = e))
+        }
+    }
+
+    override suspend fun activatePlan(planId: String): AmanResult<Unit> {
+        if (!AmanSupabase.isConfigured()) return AmanResult.Error(AmanError.ConfigurationError("Supabase غير مهيأ"))
+        return try {
+            val params = buildJsonObject {
+                put("p_plan_id", planId)
+                put("p_is_active", true)
+            }
+            AmanSupabase.postgrest.rpc(
+                function = "admin_set_protection_plan_status",
+                parameters = params
+            )
+            AmanResult.Success(Unit)
+        } catch (e: Exception) {
+            AmanResult.Error(AmanError.DatabaseError("تعذر تفعيل باقة الحماية: ${e.message}", cause = e))
+        }
+    }
+
+    override suspend fun setPlanVisibility(planId: String, isVisible: Boolean): AmanResult<Unit> {
+        if (!AmanSupabase.isConfigured()) return AmanResult.Error(AmanError.ConfigurationError("Supabase غير مهيأ"))
+        return try {
+            AmanSupabase.postgrest.from("protection_plans").update(
+                buildJsonObject {
+                    put("is_visible_to_customers", isVisible)
+                }
+            ) {
+                filter { eq("id", planId) }
+            }
+            AmanResult.Success(Unit)
+        } catch (e: Exception) {
+            AmanResult.Error(AmanError.DatabaseError("تعذر تحديث ظهور الباقة: ${e.message}", cause = e))
         }
     }
 
@@ -475,6 +671,23 @@ class AdminRepositoryImpl : AdminRepository {
             AmanResult.Success(Unit)
         } catch (e: Exception) {
             AmanResult.Error(AmanError.DatabaseError("تعذر تعطيل طريقة الدفع: ${e.message}", cause = e))
+        }
+    }
+
+    override suspend fun activatePaymentMethod(methodId: String): AmanResult<Unit> {
+        if (!AmanSupabase.isConfigured()) return AmanResult.Error(AmanError.ConfigurationError("Supabase غير مهيأ"))
+        return try {
+            val params = buildJsonObject {
+                put("p_payment_method_id", methodId)
+                put("p_is_active", true)
+            }
+            AmanSupabase.postgrest.rpc(
+                function = "admin_set_payment_method_status",
+                parameters = params
+            )
+            AmanResult.Success(Unit)
+        } catch (e: Exception) {
+            AmanResult.Error(AmanError.DatabaseError("تعذر تفعيل طريقة الدفع: ${e.message}", cause = e))
         }
     }
 
@@ -695,6 +908,73 @@ class AdminRepositoryImpl : AdminRepository {
         }
     }
 
+    override suspend fun getCustomerNumberDetails(numberId: String): AmanResult<CustomerNumberDetails> {
+        if (!AmanSupabase.isConfigured()) return AmanResult.Error(AmanError.ConfigurationError("Supabase غير مهيأ"))
+        return try {
+            val number = AmanSupabase.postgrest.from("customer_numbers")
+                .select { filter { eq("id", numberId) } }
+                .decodeSingle<CustomerNumber>()
+
+            val customer = try {
+                AmanSupabase.postgrest.from("users")
+                    .select { filter { eq("id", number.customerId) } }
+                    .decodeSingle<AppUser>()
+            } catch (_: Exception) {
+                null
+            }
+
+            val provider = try {
+                AmanSupabase.postgrest.from("telecom_providers")
+                    .select { filter { eq("id", number.providerId) } }
+                    .decodeSingle<TelecomProvider>()
+            } catch (_: Exception) {
+                null
+            }
+
+            val currentProtection = try {
+                val protections = AmanSupabase.postgrest.from("protections")
+                    .select { filter { eq("customer_number_id", numberId) } }
+                    .decodeList<Protection>()
+                protections.firstOrNull { it.status == StoredProtectionStatus.ACTIVE } ?: protections.firstOrNull()
+            } catch (_: Exception) {
+                null
+            }
+
+            val requests = try {
+                AmanSupabase.postgrest.from("protection_requests")
+                    .select { filter { eq("customer_number_id", numberId) } }
+                    .decodeList<ProtectionRequest>()
+                    .sortedByDescending { it.createdAt ?: "" }
+            } catch (_: Exception) {
+                emptyList()
+            }
+
+            val tasks = try {
+                AmanSupabase.postgrest.from("payment_tasks")
+                    .select { filter { eq("customer_number_id", numberId) } }
+                    .decodeList<PaymentTask>()
+                    .sortedByDescending { it.dueDate }
+            } catch (_: Exception) {
+                emptyList()
+            }
+
+            val enrichedNumber = number.copy(provider = provider)
+
+            AmanResult.Success(
+                CustomerNumberDetails(
+                    number = enrichedNumber,
+                    customer = customer,
+                    provider = provider,
+                    currentProtection = currentProtection,
+                    requests = requests,
+                    tasks = tasks
+                )
+            )
+        } catch (e: Exception) {
+            AmanResult.Error(AmanError.DatabaseError("تعذر جلب تفاصيل رقم العميل: ${e.message}", cause = e))
+        }
+    }
+
     // -----------------------------------------------------------------------
     // 13. الإشعارات (All Notifications Overview)
     // -----------------------------------------------------------------------
@@ -704,9 +984,69 @@ class AdminRepositoryImpl : AdminRepository {
             val notifications = AmanSupabase.postgrest.from("notifications")
                 .select()
                 .decodeList<AppNotification>()
+                .sortedByDescending { it.createdAt ?: "" }
             AmanResult.Success(notifications)
         } catch (e: Exception) {
             AmanResult.Error(AmanError.DatabaseError("تعذر جلب الإشعارات: ${e.message}", cause = e))
+        }
+    }
+
+    override suspend fun getAuditLog(logId: String): AmanResult<AuditLog?> {
+        if (!AmanSupabase.isConfigured()) return AmanResult.Error(AmanError.ConfigurationError("Supabase غير مهيأ"))
+        return try {
+            val log = AmanSupabase.postgrest.from("audit_logs")
+                .select { filter { eq("id", logId) } }
+                .decodeSingleOrNull<AuditLog>() ?: return AmanResult.Success(null)
+
+            val actorUser = log.actorId?.let { id ->
+                try {
+                    AmanSupabase.postgrest.from("users")
+                        .select { filter { eq("id", id) } }
+                        .decodeSingleOrNull<AppUser>()
+                } catch (_: Exception) { null }
+            }
+
+            AmanResult.Success(log.copy(actorName = actorUser?.name ?: actorUser?.email ?: log.actorName))
+        } catch (e: Exception) {
+            AmanResult.Error(AmanError.DatabaseError("تعذر جلب تفاصيل سجل التدقيق: ${e.message}", cause = e))
+        }
+    }
+
+    override suspend fun getNotification(notificationId: String): AmanResult<AppNotification?> {
+        if (!AmanSupabase.isConfigured()) return AmanResult.Error(AmanError.ConfigurationError("Supabase غير مهيأ"))
+        return try {
+            val n = AmanSupabase.postgrest.from("notifications")
+                .select { filter { eq("id", notificationId) } }
+                .decodeSingleOrNull<AppNotification>()
+            AmanResult.Success(n)
+        } catch (e: Exception) {
+            AmanResult.Error(AmanError.DatabaseError("تعذر جلب تفاصيل الإشعار: ${e.message}", cause = e))
+        }
+    }
+
+    override suspend fun markNotificationAsRead(notificationId: String): AmanResult<Unit> {
+        if (!AmanSupabase.isConfigured()) return AmanResult.Error(AmanError.ConfigurationError("Supabase غير مهيأ"))
+        return try {
+            try {
+                val params = buildJsonObject {
+                    put("p_notification_id", notificationId)
+                }
+                AmanSupabase.postgrest.rpc(
+                    function = "mark_notification_read",
+                    parameters = params
+                )
+            } catch (_: Exception) {
+                AmanSupabase.postgrest.from("notifications").update(
+                    buildJsonObject {
+                        put("is_read", true)
+                    }
+                ) {
+                    filter { eq("id", notificationId) }
+                }
+            }
+            AmanResult.Success(Unit)
+        } catch (e: Exception) {
+            AmanResult.Error(AmanError.DatabaseError("تعذر تحديث الإشعار: ${e.message}", cause = e))
         }
     }
 }

@@ -19,7 +19,8 @@ sealed interface AdminProtectionRequestsUiState {
     data class Content(
         val allRequests: List<ProtectionRequest>,
         val filteredRequests: List<ProtectionRequest>,
-        val selectedStatus: ProtectionRequestStatus? = null
+        val selectedStatus: ProtectionRequestStatus? = null,
+        val searchQuery: String = ""
     ) : AdminProtectionRequestsUiState
     data class Error(val message: String) : AdminProtectionRequestsUiState
 }
@@ -38,6 +39,28 @@ class AdminProtectionRequestsViewModel(
         _message.value = null
     }
 
+    private fun applyFilterAndSearch(
+        requests: List<ProtectionRequest>,
+        status: ProtectionRequestStatus?,
+        query: String
+    ): List<ProtectionRequest> {
+        val q = query.trim()
+        return requests
+            .filter { req ->
+                val matchesStatus = (status == null || req.status == status)
+                val matchesQuery = q.isEmpty() ||
+                    req.id.contains(q, ignoreCase = true) ||
+                    (req.customerNumber?.phoneNumber?.contains(q) == true) ||
+                    (req.provider?.name?.contains(q, ignoreCase = true) == true) ||
+                    (req.actorName?.contains(q, ignoreCase = true) == true) ||
+                    (req.plan?.name?.contains(q, ignoreCase = true) == true) ||
+                    (req.planNameSnapshot?.contains(q, ignoreCase = true) == true) ||
+                    (req.paymentMethodNameSnapshot?.contains(q, ignoreCase = true) == true)
+                matchesStatus && matchesQuery
+            }
+            .sortedByDescending { it.createdAt ?: "" }
+    }
+
     fun loadRequests() {
         if (!AmanSupabase.isConfigured()) {
             _uiState.value = AdminProtectionRequestsUiState.ConfigurationPending
@@ -48,16 +71,16 @@ class AdminProtectionRequestsViewModel(
         viewModelScope.launch {
             when (val res = adminRepo.getProtectionRequests()) {
                 is AmanResult.Success -> {
-                    val currentFilter = (_uiState.value as? AdminProtectionRequestsUiState.Content)?.selectedStatus
-                    val filtered = if (currentFilter == null) {
-                        res.data
-                    } else {
-                        res.data.filter { it.status == currentFilter }
-                    }
+                    val sorted = res.data.sortedByDescending { it.createdAt ?: "" }
+                    val currentContent = _uiState.value as? AdminProtectionRequestsUiState.Content
+                    val currentFilter = currentContent?.selectedStatus
+                    val currentQuery = currentContent?.searchQuery ?: ""
+                    val filtered = applyFilterAndSearch(sorted, currentFilter, currentQuery)
                     _uiState.value = AdminProtectionRequestsUiState.Content(
-                        allRequests = res.data,
+                        allRequests = sorted,
                         filteredRequests = filtered,
-                        selectedStatus = currentFilter
+                        selectedStatus = currentFilter,
+                        searchQuery = currentQuery
                     )
                 }
                 is AmanResult.Error -> {
@@ -69,13 +92,18 @@ class AdminProtectionRequestsViewModel(
 
     fun setFilter(status: ProtectionRequestStatus?) {
         val current = _uiState.value as? AdminProtectionRequestsUiState.Content ?: return
-        val filtered = if (status == null) {
-            current.allRequests
-        } else {
-            current.allRequests.filter { it.status == status }
-        }
+        val filtered = applyFilterAndSearch(current.allRequests, status, current.searchQuery)
         _uiState.value = current.copy(
             selectedStatus = status,
+            filteredRequests = filtered
+        )
+    }
+
+    fun setSearchQuery(query: String) {
+        val current = _uiState.value as? AdminProtectionRequestsUiState.Content ?: return
+        val filtered = applyFilterAndSearch(current.allRequests, current.selectedStatus, query)
+        _uiState.value = current.copy(
+            searchQuery = query,
             filteredRequests = filtered
         )
     }

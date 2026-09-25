@@ -132,7 +132,11 @@ fun AdminNotificationsScreen(
                             ) {
                                 items(filteredNotifications, key = { it.id }) { item ->
                                     Card(
-                                        modifier = Modifier.fillMaxWidth(),
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable {
+                                                onNavigate(Screen.AdminNotificationDetail.createRoute(item.id))
+                                            },
                                         shape = RoundedCornerShape(12.dp),
                                         colors = CardDefaults.cardColors(
                                             containerColor = if (item.isRead) SurfaceWhite else Primary.copy(alpha = 0.05f)

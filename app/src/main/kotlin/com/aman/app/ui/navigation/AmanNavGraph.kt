@@ -600,6 +600,39 @@ fun AmanNavGraph(
                         }
                     )
                 }
+
+                composable(Screen.AdminCustomerNumberDetail.route) { backStackEntry ->
+                    val numberId = backStackEntry.arguments?.getString("numberId") ?: ""
+                    AdminCustomerNumberDetailScreen(
+                        numberId = numberId,
+                        onBack = { navController.popBackStack() },
+                        onNavigate = { route -> navController.navigate(route) }
+                    )
+                }
+
+                composable(Screen.AdminProtectionRequestDetail.route) { backStackEntry ->
+                    val requestId = backStackEntry.arguments?.getString("requestId") ?: ""
+                    AdminProtectionRequestDetailScreen(
+                        requestId = requestId,
+                        onBack = { navController.popBackStack() }
+                    )
+                }
+
+                composable(Screen.AdminNotificationDetail.route) { backStackEntry ->
+                    val notificationId = backStackEntry.arguments?.getString("notificationId") ?: ""
+                    AdminNotificationDetailScreen(
+                        notificationId = notificationId,
+                        onBack = { navController.popBackStack() }
+                    )
+                }
+
+                composable(Screen.AdminAuditLogDetail.route) { backStackEntry ->
+                    val logId = backStackEntry.arguments?.getString("logId") ?: ""
+                    AdminAuditLogDetailScreen(
+                        logId = logId,
+                        onBack = { navController.popBackStack() }
+                    )
+                }
             }
         }
     }

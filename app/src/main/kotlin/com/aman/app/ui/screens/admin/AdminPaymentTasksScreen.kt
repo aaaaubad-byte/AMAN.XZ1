@@ -10,6 +10,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Checklist
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -110,14 +111,42 @@ fun AdminPaymentTasksScreen(
                         }
                     }
                     is AdminTasksUiState.Content -> {
+                        OutlinedTextField(
+                            value = state.searchQuery,
+                            onValueChange = { viewModel.setSearchQuery(it) },
+                            modifier = Modifier.fillMaxWidth(),
+                            placeholder = { Text("بحث بالعميل أو رقم الهاتف أو رقم المهمة أو الحماية...") },
+                            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = TextSecondary) },
+                            singleLine = true,
+                            shape = RoundedCornerShape(12.dp)
+                        )
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
                         // Filters
                         val filters = listOf(
                             null to "الكل (${state.allTasks.size})",
-                            TaskStatus.UPCOMING to "قادمة (${state.allTasks.count { it.displayStatus(visibilityWindowDays = 7) == TaskStatus.UPCOMING }})",
-                            TaskStatus.DUE to "اليوم (${state.allTasks.count { it.displayStatus(visibilityWindowDays = 7) == TaskStatus.DUE || it.displayStatus(visibilityWindowDays = 7) == TaskStatus.DUE_SOON }})",
-                            TaskStatus.OVERDUE to "متأخرة (${state.allTasks.count { it.displayStatus(visibilityWindowDays = 7) == TaskStatus.OVERDUE }})",
-                            TaskStatus.COMPLETED to "مكتملة (${state.allTasks.count { it.displayStatus(visibilityWindowDays = 7) == TaskStatus.COMPLETED }})",
-                            TaskStatus.CANCELLED to "ملغاة (${state.allTasks.count { it.displayStatus(visibilityWindowDays = 7) == TaskStatus.CANCELLED }})"
+                            TaskStatus.UPCOMING to "قادمة (${state.allTasks.count { 
+                                val win = state.settingsByProvider[it.providerId]?.daysVisibleBeforeDue ?: 7
+                                it.displayStatus(visibilityWindowDays = win) == TaskStatus.UPCOMING 
+                            }})",
+                            TaskStatus.DUE to "اليوم (${state.allTasks.count { 
+                                val win = state.settingsByProvider[it.providerId]?.daysVisibleBeforeDue ?: 7
+                                val s = it.displayStatus(visibilityWindowDays = win)
+                                s == TaskStatus.DUE || s == TaskStatus.DUE_SOON 
+                            }})",
+                            TaskStatus.OVERDUE to "متأخرة (${state.allTasks.count { 
+                                val win = state.settingsByProvider[it.providerId]?.daysVisibleBeforeDue ?: 7
+                                it.displayStatus(visibilityWindowDays = win) == TaskStatus.OVERDUE 
+                            }})",
+                            TaskStatus.COMPLETED to "مكتملة (${state.allTasks.count { 
+                                val win = state.settingsByProvider[it.providerId]?.daysVisibleBeforeDue ?: 7
+                                it.displayStatus(visibilityWindowDays = win) == TaskStatus.COMPLETED 
+                            }})",
+                            TaskStatus.CANCELLED to "ملغاة (${state.allTasks.count { 
+                                val win = state.settingsByProvider[it.providerId]?.daysVisibleBeforeDue ?: 7
+                                it.displayStatus(visibilityWindowDays = win) == TaskStatus.CANCELLED 
+                            }})"
                         )
 
                         LazyRow(
@@ -155,7 +184,11 @@ fun AdminPaymentTasksScreen(
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                     Icon(Icons.Default.Checklist, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(44.dp))
                                     Spacer(modifier = Modifier.height(8.dp))
-                                    Text("لا توجد مهام دفع في هذا التبويب", color = TextSecondary, fontSize = 14.sp)
+                                    Text(
+                                        text = if (state.searchQuery.isBlank()) "لا توجد مهام دفع في هذا التبويب" else "لا توجد نتائج مطابقة للبحث",
+                                        color = TextSecondary,
+                                        fontSize = 14.sp
+                                    )
                                 }
                             }
                         } else {

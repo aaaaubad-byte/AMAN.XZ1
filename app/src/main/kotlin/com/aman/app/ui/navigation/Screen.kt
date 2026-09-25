@@ -40,15 +40,27 @@ sealed class Screen(val route: String) {
     object AdminCustomerDetails : Screen("admin_customers/{customerId}") {
         fun createRoute(customerId: String) = "admin_customers/$customerId"
     }
+    object AdminCustomerNumberDetail : Screen("admin_customer_numbers/{numberId}") {
+        fun createRoute(numberId: String) = "admin_customer_numbers/$numberId"
+    }
     object AdminProtectionRequests : Screen("admin_protection_requests")
+    object AdminProtectionRequestDetail : Screen("admin_protection_requests/{requestId}") {
+        fun createRoute(requestId: String) = "admin_protection_requests/$requestId"
+    }
     object AdminProtections : Screen("admin_protections")
     object AdminTelecomProviders : Screen("admin_telecom_providers")
     object AdminProtectionPlans : Screen("admin_protection_plans")
     object AdminPaymentMethods : Screen("admin_payment_methods")
     object AdminPaymentTasks : Screen("admin_payment_tasks")
     object AdminNotifications : Screen("admin_notifications")
+    object AdminNotificationDetail : Screen("admin_notifications/{notificationId}") {
+        fun createRoute(notificationId: String) = "admin_notifications/$notificationId"
+    }
     object AdminTaskSettings : Screen("admin_task_settings")
     object AdminSystemSettings : Screen("admin_system_settings")
     object AdminAuditLogs : Screen("admin_audit_logs")
+    object AdminAuditLogDetail : Screen("admin_audit_logs/{logId}") {
+        fun createRoute(logId: String) = "admin_audit_logs/$logId"
+    }
 }
 

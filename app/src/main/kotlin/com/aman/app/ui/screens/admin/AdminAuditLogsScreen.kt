@@ -1,21 +1,21 @@
 package com.aman.app.ui.screens.admin
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -95,21 +95,99 @@ fun AdminAuditLogsScreen(
                         }
                     }
                     is AdminAuditLogsUiState.Content -> {
-                        if (state.logs.isEmpty()) {
-                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Icon(Icons.Default.History, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(48.dp))
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                    Text("لا توجد سجلات عمليات مدونة بعد", color = TextSecondary, fontSize = 14.sp)
+                        Column(modifier = Modifier.fillMaxSize()) {
+                            // Search field
+                            OutlinedTextField(
+                                value = state.searchQuery,
+                                onValueChange = { viewModel.setSearchQuery(it) },
+                                modifier = Modifier.fillMaxWidth(),
+                                placeholder = { Text("بحث بالإجراء أو المنفذ أو الجدول أو السجل...") },
+                                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = TextSecondary) },
+                                singleLine = true,
+                                shape = RoundedCornerShape(12.dp)
+                            )
+
+                            Spacer(modifier = Modifier.height(10.dp))
+
+                            // Entity Filters Row
+                            if (state.availableEntities.isNotEmpty()) {
+                                LazyRow(
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    item {
+                                        val isSelected = state.selectedEntity == null
+                                        Box(
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(20.dp))
+                                                .background(if (isSelected) Primary else SurfaceWhite)
+                                                .clickable { viewModel.setSelectedEntity(null) }
+                                                .padding(horizontal = 12.dp, vertical = 6.dp)
+                                        ) {
+                                            Text(
+                                                text = "كل الأقسام",
+                                                color = if (isSelected) SurfaceWhite else TextSecondary,
+                                                fontSize = 11.sp,
+                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                            )
+                                        }
+                                    }
+                                    items(state.availableEntities) { ent ->
+                                        val isSelected = state.selectedEntity == ent
+                                        val friendlyName = when (ent.lowercase()) {
+                                            "customer_numbers" -> "الأرقام"
+                                            "protection_requests" -> "الطلبات"
+                                            "protections" -> "الحمايات"
+                                            "payment_tasks" -> "المهام"
+                                            "payment_methods" -> "طرق الدفع"
+                                            "protection_plans" -> "الباقات"
+                                            "telecom_providers" -> "الشركات"
+                                            "telecom_prefixes" -> "البادئات"
+                                            "users" -> "المستخدمين"
+                                            else -> ent
+                                        }
+                                        Box(
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(20.dp))
+                                                .background(if (isSelected) Primary else SurfaceWhite)
+                                                .clickable { viewModel.setSelectedEntity(if (isSelected) null else ent) }
+                                                .padding(horizontal = 12.dp, vertical = 6.dp)
+                                        ) {
+                                            Text(
+                                                text = friendlyName,
+                                                color = if (isSelected) SurfaceWhite else TextSecondary,
+                                                fontSize = 11.sp,
+                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                            )
+                                        }
+                                    }
                                 }
+                                Spacer(modifier = Modifier.height(12.dp))
                             }
-                        } else {
-                            LazyColumn(
-                                modifier = Modifier.fillMaxSize(),
-                                verticalArrangement = Arrangement.spacedBy(10.dp)
-                            ) {
-                                items(state.logs) { log ->
-                                    AuditLogCard(log = log)
+
+                            if (state.filteredLogs.isEmpty()) {
+                                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Icon(Icons.Default.History, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(48.dp))
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        Text(
+                                            text = if (state.searchQuery.isBlank() && state.selectedEntity == null) "لا توجد سجلات عمليات مدونة بعد" else "لا توجد نتائج مطابقة للبحث أو التصفية",
+                                            color = TextSecondary,
+                                            fontSize = 14.sp
+                                        )
+                                    }
+                                }
+                            } else {
+                                LazyColumn(
+                                    modifier = Modifier.fillMaxSize(),
+                                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    items(state.filteredLogs, key = { it.id }) { log ->
+                                        AuditLogCard(
+                                            log = log,
+                                            onClick = { onNavigate(Screen.AdminAuditLogDetail.createRoute(log.id)) }
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -121,11 +199,16 @@ fun AdminAuditLogsScreen(
 }
 
 @Composable
-fun AuditLogCard(log: AuditLog) {
+fun AuditLogCard(
+    log: AuditLog,
+    onClick: () -> Unit = {}
+) {
     Card(
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
     ) {
         Column(modifier = Modifier.padding(14.dp)) {
             Row(

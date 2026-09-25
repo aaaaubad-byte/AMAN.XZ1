@@ -20,7 +20,9 @@ sealed interface AdminTasksUiState {
     data class Content(
         val allTasks: List<PaymentTask>,
         val filteredTasks: List<PaymentTask>,
-        val selectedStatus: TaskStatus? = null
+        val selectedStatus: TaskStatus? = null,
+        val searchQuery: String = "",
+        val settingsByProvider: Map<String, TaskSettings> = emptyMap()
     ) : AdminTasksUiState
     data class Error(val message: String) : AdminTasksUiState
 }
@@ -55,19 +57,30 @@ class AdminPaymentTasksViewModel(
     private fun filterTasks(
         tasks: List<PaymentTask>,
         status: TaskStatus?,
+        searchQuery: String,
         settingsByProvider: Map<String, TaskSettings>
     ): List<PaymentTask> {
-        if (status == null) return tasks
+        val q = searchQuery.trim()
         return tasks.filter { task ->
-            when (status) {
-                TaskStatus.UPCOMING -> classifyTask(task, settingsByProvider) == TaskStatus.UPCOMING
-                TaskStatus.DUE -> classifyTask(task, settingsByProvider) == TaskStatus.DUE || classifyTask(task, settingsByProvider) == TaskStatus.DUE_SOON
-                TaskStatus.OVERDUE -> classifyTask(task, settingsByProvider) == TaskStatus.OVERDUE
-                TaskStatus.COMPLETED -> classifyTask(task, settingsByProvider) == TaskStatus.COMPLETED
-                TaskStatus.CANCELLED -> classifyTask(task, settingsByProvider) == TaskStatus.CANCELLED
-                TaskStatus.PENDING -> classifyTask(task, settingsByProvider) == TaskStatus.UPCOMING || classifyTask(task, settingsByProvider) == TaskStatus.DUE_SOON
-                TaskStatus.DUE_SOON -> classifyTask(task, settingsByProvider) == TaskStatus.DUE_SOON
+            val matchesStatus = if (status == null) true else {
+                when (status) {
+                    TaskStatus.UPCOMING -> classifyTask(task, settingsByProvider) == TaskStatus.UPCOMING
+                    TaskStatus.DUE -> classifyTask(task, settingsByProvider) == TaskStatus.DUE || classifyTask(task, settingsByProvider) == TaskStatus.DUE_SOON
+                    TaskStatus.OVERDUE -> classifyTask(task, settingsByProvider) == TaskStatus.OVERDUE
+                    TaskStatus.COMPLETED -> classifyTask(task, settingsByProvider) == TaskStatus.COMPLETED
+                    TaskStatus.CANCELLED -> classifyTask(task, settingsByProvider) == TaskStatus.CANCELLED
+                    TaskStatus.PENDING -> classifyTask(task, settingsByProvider) == TaskStatus.UPCOMING || classifyTask(task, settingsByProvider) == TaskStatus.DUE_SOON
+                    TaskStatus.DUE_SOON -> classifyTask(task, settingsByProvider) == TaskStatus.DUE_SOON
+                }
             }
+            val matchesSearch = q.isEmpty() ||
+                task.id.contains(q, ignoreCase = true) ||
+                task.protectionId.contains(q, ignoreCase = true) ||
+                (task.customerNumber?.phoneNumber?.contains(q) == true) ||
+                (task.provider?.name?.contains(q, ignoreCase = true) == true) ||
+                (task.actorName?.contains(q, ignoreCase = true) == true)
+
+            matchesStatus && matchesSearch
         }
     }
 
@@ -87,16 +100,17 @@ class AdminPaymentTasksViewModel(
                     }
                     loadedSettingsByProvider = settingsMap
 
-                    val currentFilter = (_uiState.value as? AdminTasksUiState.Content)?.selectedStatus
-                    val filtered = if (currentFilter == null) {
-                        tasksResult.data
-                    } else {
-                        filterTasks(tasksResult.data, currentFilter, loadedSettingsByProvider)
-                    }
+                    val currentContent = _uiState.value as? AdminTasksUiState.Content
+                    val currentFilter = currentContent?.selectedStatus
+                    val currentQuery = currentContent?.searchQuery ?: ""
+                    val filtered = filterTasks(tasksResult.data, currentFilter, currentQuery, loadedSettingsByProvider)
+
                     _uiState.value = AdminTasksUiState.Content(
                         allTasks = tasksResult.data,
                         filteredTasks = filtered,
-                        selectedStatus = currentFilter
+                        selectedStatus = currentFilter,
+                        searchQuery = currentQuery,
+                        settingsByProvider = loadedSettingsByProvider
                     )
                 }
                 is AmanResult.Error -> {
@@ -106,12 +120,27 @@ class AdminPaymentTasksViewModel(
         }
     }
 
+    fun getVisibilityWindow(providerId: String): Int {
+        return loadedSettingsByProvider[providerId]?.daysVisibleBeforeDue ?: 7
+    }
+
     fun setFilter(status: TaskStatus?) {
         val current = _uiState.value as? AdminTasksUiState.Content ?: return
-        val filtered = filterTasks(current.allTasks, status, loadedSettingsByProvider)
+        val filtered = filterTasks(current.allTasks, status, current.searchQuery, loadedSettingsByProvider)
         _uiState.value = current.copy(
             selectedStatus = status,
-            filteredTasks = filtered
+            filteredTasks = filtered,
+            settingsByProvider = loadedSettingsByProvider
+        )
+    }
+
+    fun setSearchQuery(query: String) {
+        val current = _uiState.value as? AdminTasksUiState.Content ?: return
+        val filtered = filterTasks(current.allTasks, current.selectedStatus, query, loadedSettingsByProvider)
+        _uiState.value = current.copy(
+            searchQuery = query,
+            filteredTasks = filtered,
+            settingsByProvider = loadedSettingsByProvider
         )
     }
 

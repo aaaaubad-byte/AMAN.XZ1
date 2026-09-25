@@ -1,6 +1,7 @@
 package com.aman.app.ui.screens.admin
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -31,6 +32,7 @@ import com.aman.app.ui.theme.*
 fun AdminCustomerDetailsScreen(
     customerId: String,
     viewModel: AdminCustomersViewModel = viewModel(),
+    onNavigate: (String) -> Unit = {},
     onBack: () -> Unit
 ) {
     val detailsState by viewModel.detailsState.collectAsState()
@@ -118,7 +120,11 @@ fun AdminCustomerDetailsScreen(
                                 Card(
                                     shape = RoundedCornerShape(10.dp),
                                     colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
-                                    modifier = Modifier.fillMaxWidth()
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            onNavigate(Screen.AdminCustomerNumberDetail.createRoute(num.id))
+                                        }
                                 ) {
                                     Row(
                                         modifier = Modifier

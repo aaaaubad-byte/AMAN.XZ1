@@ -103,4 +103,33 @@ class AdminProtectionPlansViewModel(
             }
         }
     }
+
+    fun activatePlan(planId: String) {
+        viewModelScope.launch {
+            when (val res = adminRepo.activatePlan(planId)) {
+                is AmanResult.Success -> {
+                    _message.value = "تمت إعادة تفعيل باقة الحماية بنجاح"
+                    loadData()
+                }
+                is AmanResult.Error -> {
+                    _message.value = "تعذر تفعيل الباقة: ${res.error.message}"
+                }
+            }
+        }
+    }
+
+    fun togglePlanVisibility(plan: ProtectionPlan) {
+        val newVisibility = !plan.isVisibleToCustomer
+        viewModelScope.launch {
+            when (val res = adminRepo.setPlanVisibility(plan.id, newVisibility)) {
+                is AmanResult.Success -> {
+                    _message.value = if (newVisibility) "تم إظهار الباقة للعملاء بنجاح" else "تم إخفاء الباقة عن العملاء بنجاح"
+                    loadData()
+                }
+                is AmanResult.Error -> {
+                    _message.value = "تعذر تغيير ظهور الباقة: ${res.error.message}"
+                }
+            }
+        }
+    }
 }
