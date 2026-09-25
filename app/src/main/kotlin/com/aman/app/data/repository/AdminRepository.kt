@@ -29,7 +29,7 @@ interface AdminRepository {
 
     // 3. Protection Requests
     suspend fun getProtectionRequests(status: ProtectionRequestStatus? = null): AmanResult<List<ProtectionRequest>>
-    suspend fun approveProtectionRequest(requestId: String): AmanResult<String>
+    suspend fun approveProtectionRequest(requestId: String): AmanResult<Protection>
     suspend fun rejectProtectionRequest(requestId: String, reason: String): AmanResult<Unit>
 
     // 4. Protections
@@ -55,7 +55,7 @@ interface AdminRepository {
 
     // 8. Payment Tasks
     suspend fun getAllTasks(status: TaskStatus? = null): AmanResult<List<PaymentTask>>
-    suspend fun completePaymentTask(taskId: String): AmanResult<String>
+    suspend fun completePaymentTask(taskId: String): AmanResult<PaymentTask>
     suspend fun cancelPaymentTask(taskId: String, reason: String): AmanResult<Unit>
     suspend fun reschedulePaymentTask(taskId: String, newDueDate: String, reason: String): AmanResult<Unit>
 
@@ -184,7 +184,7 @@ class AdminRepositoryImpl : AdminRepository {
         }
     }
 
-    override suspend fun approveProtectionRequest(requestId: String): AmanResult<String> {
+    override suspend fun approveProtectionRequest(requestId: String): AmanResult<Protection> {
         if (!AmanSupabase.isConfigured()) return AmanResult.Error(AmanError.ConfigurationError("Supabase غير مهيأ"))
         return try {
             // Atomic Backend RPC executing transactions:
@@ -192,12 +192,12 @@ class AdminRepositoryImpl : AdminRepository {
             val params = buildJsonObject {
                 put("p_request_id", requestId)
             }
-            val protectionId = AmanSupabase.postgrest.rpc(
+            val protection = AmanSupabase.postgrest.rpc(
                 function = "approve_protection_request",
                 parameters = params
-            ).decodeAs<String>()
+            ).decodeAs<Protection>()
 
-            AmanResult.Success(protectionId)
+            AmanResult.Success(protection)
         } catch (e: Exception) {
             AmanResult.Error(AmanError.DatabaseError("فشل اعتماد طلب الحماية: ${e.message}", cause = e))
         }
@@ -487,7 +487,7 @@ class AdminRepositoryImpl : AdminRepository {
         }
     }
 
-    override suspend fun completePaymentTask(taskId: String): AmanResult<String> {
+    override suspend fun completePaymentTask(taskId: String): AmanResult<PaymentTask> {
         if (!AmanSupabase.isConfigured()) return AmanResult.Error(AmanError.ConfigurationError("Supabase غير مهيأ"))
         return try {
             val params = buildJsonObject {
@@ -497,7 +497,7 @@ class AdminRepositoryImpl : AdminRepository {
                 function = "complete_payment_task",
                 parameters = params
             ).decodeAs<PaymentTask>()
-            AmanResult.Success(completedTask.id)
+            AmanResult.Success(completedTask)
         } catch (e: Exception) {
             AmanResult.Error(AmanError.DatabaseError("فشل إكمال المهمة: ${e.message}", cause = e))
         }

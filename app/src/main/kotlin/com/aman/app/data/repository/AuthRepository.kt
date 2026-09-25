@@ -106,15 +106,13 @@ class AuthRepository : AuthRepositoryContract {
                 if (userRecord != null) break
             }
 
-            val finalUser = userRecord ?: AppUser(
-                id = currentUser.id,
-                name = name.trim(),
-                email = email.trim(),
-                role = UserRole.CUSTOMER,
-                accountStatus = "active"
-            )
+            if (userRecord == null) {
+                return AmanResult.Error(
+                    AmanError.AuthenticationError("لم يتم إنشاء حساب المستخدم في قاعدة التطبيق بعد تسجيل الحساب. يرجى المحاولة مرة أخرى أو التواصل مع الإدارة.")
+                )
+            }
 
-            AmanResult.Success(finalUser)
+            AmanResult.Success(userRecord)
         } catch (e: Exception) {
             AmanResult.Error(AmanError.AuthenticationError("فشل إنشاء الحساب: ${e.message}", e))
         }

@@ -454,7 +454,9 @@ interface SystemSettingsRepository {
 class SystemSettingsRepositoryImpl : SystemSettingsRepository {
 
     override suspend fun getSettings(): AmanResult<SystemSettings> {
-        if (!AmanSupabase.isConfigured()) return AmanResult.Success(SystemSettings())
+        if (!AmanSupabase.isConfigured()) {
+            return AmanResult.Error(AmanError.ConfigurationError("بيانات اتصال Supabase غير مهيأة بعد"))
+        }
         return try {
             val settings = AmanSupabase.postgrest.from("system_settings")
                 .select()

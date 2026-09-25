@@ -7,6 +7,8 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonPrimitive
+import java.time.LocalDate
+import java.time.temporal.ChronoUnit
 
 /**
  * Domain & Data Models for AMAN | أمان
@@ -353,6 +355,7 @@ data class PaymentTask(
     val id: String,
     @SerialName("protection_id") val protectionId: String,
     @SerialName("customer_number_id") val customerNumberId: String,
+    @SerialName("provider_id") val providerId: String? = null,
     @SerialName("task_type") val taskType: TaskType = TaskType.RECURRING,
     val amount: Double,
     @SerialName("due_date") val dueDate: String,
@@ -368,8 +371,35 @@ data class PaymentTask(
     @SerialName("cancellation_reason") val cancellationReason: String? = null,
     @SerialName("created_at") val createdAt: String? = null,
     @SerialName("updated_at") val updatedAt: String? = null,
-    @SerialName("customer_number") val customerNumber: CustomerNumber? = null
-)
+    @SerialName("customer_number") val customerNumber: CustomerNumber? = null,
+    @SerialName("provider") val provider: TelecomProvider? = null
+) {
+    fun displayStatus(visibilityWindowDays: Int = 7, now: LocalDate = LocalDate.now()): TaskStatus {
+        if (status == TaskStatus.COMPLETED || status == TaskStatus.CANCELLED) {
+            return status
+        }
+
+        val dueDateValue = runCatching {
+            LocalDate.parse(dueDate.substringBefore("T"))
+        }.getOrElse {
+            runCatching { LocalDate.parse(dueDate.take(10)) }.getOrDefault(now)
+        }
+
+        val daysDifference = ChronoUnit.DAYS.between(now, dueDateValue)
+        return when {
+            daysDifference < 0 -> TaskStatus.OVERDUE
+            daysDifference == 0L -> TaskStatus.DUE
+            daysDifference in 1..maxOf(0, visibilityWindowDays) -> TaskStatus.DUE_SOON
+            else -> TaskStatus.UPCOMING
+        }
+    }
+
+    val actionableStatus: TaskStatus
+        get() = displayStatus(visibilityWindowDays = 7)
+
+    val isActionable: Boolean
+        get() = actionableStatus == TaskStatus.UPCOMING || actionableStatus == TaskStatus.DUE || actionableStatus == TaskStatus.OVERDUE
+}
 
 // ---------------------------------------------------------------------------
 // 9. إعدادات المهام (Task Settings)

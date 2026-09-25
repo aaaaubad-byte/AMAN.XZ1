@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.aman.app.core.result.AmanResult
 import com.aman.app.data.model.PaymentTask
+import com.aman.app.data.model.TaskSettings
 import com.aman.app.data.model.TaskStatus
 import com.aman.app.data.remote.AmanSupabase
 import com.aman.app.data.repository.AdminRepository
@@ -38,6 +39,36 @@ class AdminPaymentTasksViewModel(
         _message.value = null
     }
 
+    private fun resolveVisibilityWindow(task: PaymentTask, settingsByProvider: Map<String, TaskSettings>): Int {
+        val configuredWindow = settingsByProvider[task.providerId]?.daysVisibleBeforeDue
+        return configuredWindow ?: 7
+    }
+
+    private fun classifyTask(task: PaymentTask, settingsByProvider: Map<String, TaskSettings>): TaskStatus {
+        return task.displayStatus(
+            visibilityWindowDays = resolveVisibilityWindow(task, settingsByProvider),
+        )
+    }
+
+    private fun filterTasks(
+        tasks: List<PaymentTask>,
+        status: TaskStatus?,
+        settingsByProvider: Map<String, TaskSettings>
+    ): List<PaymentTask> {
+        if (status == null) return tasks
+        return tasks.filter { task ->
+            when (status) {
+                TaskStatus.UPCOMING -> classifyTask(task, settingsByProvider) == TaskStatus.UPCOMING
+                TaskStatus.DUE -> classifyTask(task, settingsByProvider) == TaskStatus.DUE || classifyTask(task, settingsByProvider) == TaskStatus.DUE_SOON
+                TaskStatus.OVERDUE -> classifyTask(task, settingsByProvider) == TaskStatus.OVERDUE
+                TaskStatus.COMPLETED -> classifyTask(task, settingsByProvider) == TaskStatus.COMPLETED
+                TaskStatus.CANCELLED -> classifyTask(task, settingsByProvider) == TaskStatus.CANCELLED
+                TaskStatus.PENDING -> classifyTask(task, settingsByProvider) == TaskStatus.UPCOMING || classifyTask(task, settingsByProvider) == TaskStatus.DUE_SOON
+                TaskStatus.DUE_SOON -> classifyTask(task, settingsByProvider) == TaskStatus.DUE_SOON
+            }
+        }
+    }
+
     fun loadTasks() {
         if (!AmanSupabase.isConfigured()) {
             _uiState.value = AdminTasksUiState.ConfigurationPending
@@ -46,22 +77,27 @@ class AdminPaymentTasksViewModel(
 
         _uiState.value = AdminTasksUiState.Loading
         viewModelScope.launch {
-            when (val res = adminRepo.getAllTasks()) {
+            when (val tasksResult = adminRepo.getAllTasks()) {
                 is AmanResult.Success -> {
+                    val settingsMap = when (val settingsResult = adminRepo.getTaskSettings()) {
+                        is AmanResult.Success -> settingsResult.data.associateBy { it.providerId }
+                        is AmanResult.Error -> emptyMap()
+                    }
+
                     val currentFilter = (_uiState.value as? AdminTasksUiState.Content)?.selectedStatus
                     val filtered = if (currentFilter == null) {
-                        res.data
+                        tasksResult.data
                     } else {
-                        res.data.filter { it.status == currentFilter }
+                        filterTasks(tasksResult.data, currentFilter, settingsMap)
                     }
                     _uiState.value = AdminTasksUiState.Content(
-                        allTasks = res.data,
+                        allTasks = tasksResult.data,
                         filteredTasks = filtered,
                         selectedStatus = currentFilter
                     )
                 }
                 is AmanResult.Error -> {
-                    _uiState.value = AdminTasksUiState.Error(res.error.message)
+                    _uiState.value = AdminTasksUiState.Error(tasksResult.error.message)
                 }
             }
         }
@@ -69,17 +105,7 @@ class AdminPaymentTasksViewModel(
 
     fun setFilter(status: TaskStatus?) {
         val current = _uiState.value as? AdminTasksUiState.Content ?: return
-        val filtered = if (status == null) {
-            current.allTasks
-        } else {
-            current.allTasks.filter { task ->
-                when (status) {
-                    TaskStatus.UPCOMING -> task.status == TaskStatus.UPCOMING || task.status == TaskStatus.PENDING
-                    TaskStatus.DUE -> task.status == TaskStatus.DUE || task.status == TaskStatus.DUE_SOON
-                    else -> task.status == status
-                }
-            }
-        }
+        val filtered = filterTasks(current.allTasks, status, emptyMap())
         _uiState.value = current.copy(
             selectedStatus = status,
             filteredTasks = filtered

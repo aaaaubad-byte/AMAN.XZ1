@@ -82,6 +82,46 @@ class Stage5FullIntegrationTest {
         assertEquals(TaskStatus.CANCELLED, status)
     }
 
+    @Test
+    fun testPaymentTaskDynamicDisplayStatusUsesVisibilityWindow() {
+        val now = LocalDate.now()
+        val dueSoonTask = PaymentTask(
+            id = "task-1",
+            protectionId = "prot-1",
+            customerNumberId = "num-1",
+            taskType = TaskType.RECURRING,
+            amount = 100.0,
+            dueDate = now.plusDays(3).toString(),
+            status = TaskStatus.PENDING,
+            providerId = "prov-1"
+        )
+
+        assertEquals(TaskStatus.DUE_SOON, dueSoonTask.displayStatus(visibilityWindowDays = 5, now = now))
+
+        val dueTask = dueSoonTask.copy(dueDate = now.toString())
+        assertEquals(TaskStatus.DUE, dueTask.displayStatus(visibilityWindowDays = 5, now = now))
+
+        val overdueTask = dueSoonTask.copy(dueDate = now.minusDays(2).toString())
+        assertEquals(TaskStatus.OVERDUE, overdueTask.displayStatus(visibilityWindowDays = 5, now = now))
+    }
+
+    @Test
+    fun testCompletedTaskStaysFinalEvenWhenDatesSuggestOverdue() {
+        val now = LocalDate.now()
+        val completedTask = PaymentTask(
+            id = "task-2",
+            protectionId = "prot-2",
+            customerNumberId = "num-2",
+            taskType = TaskType.FIRST,
+            amount = 150.0,
+            dueDate = now.minusDays(30).toString(),
+            status = TaskStatus.COMPLETED,
+            providerId = "prov-1"
+        )
+
+        assertEquals(TaskStatus.COMPLETED, completedTask.displayStatus(visibilityWindowDays = 5, now = now))
+    }
+
     // -------------------------------------------------------------------------
     // 2. Historical Snapshot Invariants
     // -------------------------------------------------------------------------

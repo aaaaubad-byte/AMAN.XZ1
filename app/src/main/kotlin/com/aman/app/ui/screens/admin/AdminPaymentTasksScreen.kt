@@ -113,11 +113,11 @@ fun AdminPaymentTasksScreen(
                         // Filters
                         val filters = listOf(
                             null to "الكل (${state.allTasks.size})",
-                            TaskStatus.UPCOMING to "قادمة (${state.allTasks.count { it.status == TaskStatus.UPCOMING || it.status == TaskStatus.PENDING }})",
-                            TaskStatus.DUE to "اليوم (${state.allTasks.count { it.status == TaskStatus.DUE || it.status == TaskStatus.DUE_SOON }})",
-                            TaskStatus.OVERDUE to "متأخرة (${state.allTasks.count { it.status == TaskStatus.OVERDUE }})",
-                            TaskStatus.COMPLETED to "مكتملة (${state.allTasks.count { it.status == TaskStatus.COMPLETED }})",
-                            TaskStatus.CANCELLED to "ملغاة (${state.allTasks.count { it.status == TaskStatus.CANCELLED }})"
+                            TaskStatus.UPCOMING to "قادمة (${state.allTasks.count { it.displayStatus(visibilityWindowDays = 7) == TaskStatus.UPCOMING }})",
+                            TaskStatus.DUE to "اليوم (${state.allTasks.count { it.displayStatus(visibilityWindowDays = 7) == TaskStatus.DUE || it.displayStatus(visibilityWindowDays = 7) == TaskStatus.DUE_SOON }})",
+                            TaskStatus.OVERDUE to "متأخرة (${state.allTasks.count { it.displayStatus(visibilityWindowDays = 7) == TaskStatus.OVERDUE }})",
+                            TaskStatus.COMPLETED to "مكتملة (${state.allTasks.count { it.displayStatus(visibilityWindowDays = 7) == TaskStatus.COMPLETED }})",
+                            TaskStatus.CANCELLED to "ملغاة (${state.allTasks.count { it.displayStatus(visibilityWindowDays = 7) == TaskStatus.CANCELLED }})"
                         )
 
                         LazyRow(
@@ -278,7 +278,8 @@ fun AdminTaskCard(
     onCancel: () -> Unit,
     onReschedule: () -> Unit
 ) {
-    val isPendingAction = task.status == TaskStatus.UPCOMING || task.status == TaskStatus.DUE || task.status == TaskStatus.OVERDUE
+    val displayStatus = task.displayStatus(visibilityWindowDays = 7)
+    val isPendingAction = displayStatus == TaskStatus.UPCOMING || displayStatus == TaskStatus.DUE || displayStatus == TaskStatus.OVERDUE
 
     AmanCard {
         Row(
@@ -304,7 +305,7 @@ fun AdminTaskCard(
                     color = TextSecondary
                 )
             }
-            StatusBadge(status = task.status.name)
+            StatusBadge(status = displayStatus.name)
         }
 
         if (isPendingAction) {
