@@ -1,6 +1,7 @@
 package com.aman.app.ui.screens.client
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -32,7 +33,8 @@ fun ClientProtectionRequestsScreen(
     customerId: String?,
     onMenuClick: () -> Unit,
     onNavigateToCreateRequest: () -> Unit,
-    onNavigateToNotifications: () -> Unit
+    onNavigateToNotifications: () -> Unit,
+    onRequestClick: (String) -> Unit = {}
 ) {
     val listState by viewModel.listState.collectAsState()
     val selectedTab by viewModel.selectedFilterTab.collectAsState()
@@ -134,7 +136,7 @@ fun ClientProtectionRequestsScreen(
                                 verticalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
                                 items(filteredList) { request ->
-                                    ProtectionRequestItemCard(request = request)
+                                    ProtectionRequestItemCard(request = request, onClick = { onRequestClick(request.id) })
                                 }
 
                                 item {
@@ -150,8 +152,13 @@ fun ClientProtectionRequestsScreen(
 }
 
 @Composable
-private fun ProtectionRequestItemCard(request: ProtectionRequest) {
-    AmanCard {
+private fun ProtectionRequestItemCard(
+    request: ProtectionRequest,
+    onClick: () -> Unit = {}
+) {
+    AmanCard(
+        modifier = Modifier.clickable(onClick = onClick)
+    ) {
         Column(modifier = Modifier.fillMaxWidth()) {
             // Header: Phone & Status Badge
             Row(

@@ -281,7 +281,7 @@ fun AdminTaskCard(
     val displayStatus = task.displayStatus(visibilityWindowDays = 7)
     val isPendingAction = displayStatus == TaskStatus.UPCOMING || displayStatus == TaskStatus.DUE || displayStatus == TaskStatus.OVERDUE
 
-    AmanCard {
+    AmanCard(modifier = Modifier.clickable(onClick = onClick)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,

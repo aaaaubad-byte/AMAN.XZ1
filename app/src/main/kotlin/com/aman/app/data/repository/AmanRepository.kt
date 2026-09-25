@@ -429,6 +429,49 @@ interface ProtectionRequestRepository {
 
 class ProtectionRequestRepositoryImpl : ProtectionRequestRepository {
 
+    override suspend fun getRequestDetails(requestId: String): AmanResult<ProtectionRequest?> {
+        if (!AmanSupabase.isConfigured()) return AmanResult.Error(AmanError.ConfigurationError("Supabase غير مهيأ"))
+        return try {
+            val record = AmanSupabase.postgrest.from("protection_requests")
+                .select {
+                    filter { eq("id", requestId) }
+                }.decodeSingleOrNull<ProtectionRequest>() ?: return AmanResult.Success(null)
+
+            val number = try {
+                AmanSupabase.postgrest.from("customer_numbers")
+                    .select { filter { eq("id", record.customerNumberId) } }
+                    .decodeSingleOrNull<CustomerNumber>()
+            } catch (_: Exception) { null }
+
+            val plan = try {
+                AmanSupabase.postgrest.from("protection_plans")
+                    .select { filter { eq("id", record.planId) } }
+                    .decodeSingleOrNull<ProtectionPlan>()
+            } catch (_: Exception) { null }
+
+            val provider = try {
+                AmanSupabase.postgrest.from("telecom_providers")
+                    .select { filter { eq("id", record.providerId) } }
+                    .decodeSingleOrNull<TelecomProvider>()
+            } catch (_: Exception) { null }
+
+            val paymentMethod = try {
+                AmanSupabase.postgrest.from("payment_methods")
+                    .select { filter { eq("id", record.paymentMethodId) } }
+                    .decodeSingleOrNull<PaymentMethod>()
+            } catch (_: Exception) { null }
+
+            AmanResult.Success(record.copy(
+                customerNumber = number,
+                plan = plan,
+                provider = provider,
+                paymentMethod = paymentMethod
+            ))
+        } catch (e: Exception) {
+            AmanResult.Error(AmanError.DatabaseError("تعذر جلب تفاصيل الطلب: ${e.message}", cause = e))
+        }
+    }
+
     override suspend fun getCustomerRequests(customerId: String): AmanResult<List<ProtectionRequest>> {
         if (!AmanSupabase.isConfigured()) return AmanResult.Error(AmanError.ConfigurationError("Supabase غير مهيأ"))
         return try {
@@ -541,9 +584,46 @@ class ProtectionRequestRepositoryImpl : ProtectionRequestRepository {
 interface ProtectionRepository {
     suspend fun getCustomerProtections(customerId: String): AmanResult<List<Protection>>
     suspend fun getAllProtections(): AmanResult<List<Protection>>
+    suspend fun getProtectionDetails(protectionId: String): AmanResult<Protection?>
 }
 
 class ProtectionRepositoryImpl : ProtectionRepository {
+
+    override suspend fun getProtectionDetails(protectionId: String): AmanResult<Protection?> {
+        if (!AmanSupabase.isConfigured()) return AmanResult.Error(AmanError.ConfigurationError("Supabase غير مهيأ"))
+        return try {
+            val record = AmanSupabase.postgrest.from("protections")
+                .select {
+                    filter { eq("id", protectionId) }
+                }.decodeSingleOrNull<Protection>() ?: return AmanResult.Success(null)
+
+            val number = try {
+                AmanSupabase.postgrest.from("customer_numbers")
+                    .select { filter { eq("id", record.customerNumberId) } }
+                    .decodeSingleOrNull<CustomerNumber>()
+            } catch (_: Exception) { null }
+
+            val plan = try {
+                AmanSupabase.postgrest.from("protection_plans")
+                    .select { filter { eq("id", record.planId) } }
+                    .decodeSingleOrNull<ProtectionPlan>()
+            } catch (_: Exception) { null }
+
+            val provider = try {
+                AmanSupabase.postgrest.from("telecom_providers")
+                    .select { filter { eq("id", record.providerId) } }
+                    .decodeSingleOrNull<TelecomProvider>()
+            } catch (_: Exception) { null }
+
+            AmanResult.Success(record.copy(
+                customerNumber = number,
+                plan = plan,
+                provider = provider
+            ))
+        } catch (e: Exception) {
+            AmanResult.Error(AmanError.DatabaseError("تعذر جلب تفاصيل الحماية: ${e.message}", cause = e))
+        }
+    }
 
     override suspend fun getCustomerProtections(customerId: String): AmanResult<List<Protection>> {
         if (!AmanSupabase.isConfigured()) return AmanResult.Error(AmanError.ConfigurationError("Supabase غير مهيأ"))
@@ -577,9 +657,38 @@ class ProtectionRepositoryImpl : ProtectionRepository {
 interface PaymentTaskRepository {
     suspend fun getAllTasks(): AmanResult<List<PaymentTask>>
     suspend fun getTasksByStatus(status: TaskStatus): AmanResult<List<PaymentTask>>
+    suspend fun getTaskDetails(taskId: String): AmanResult<PaymentTask?>
 }
 
 class PaymentTaskRepositoryImpl : PaymentTaskRepository {
+
+    override suspend fun getTaskDetails(taskId: String): AmanResult<PaymentTask?> {
+        if (!AmanSupabase.isConfigured()) return AmanResult.Error(AmanError.ConfigurationError("Supabase غير مهيأ"))
+        return try {
+            val record = AmanSupabase.postgrest.from("payment_tasks")
+                .select {
+                    filter { eq("id", taskId) }
+                }.decodeSingleOrNull<PaymentTask>() ?: return AmanResult.Success(null)
+
+            val number = try {
+                AmanSupabase.postgrest.from("customer_numbers")
+                    .select { filter { eq("id", record.customerNumberId) } }
+                    .decodeSingleOrNull<CustomerNumber>()
+            } catch (_: Exception) { null }
+
+            val provider = if (record.providerId != null) {
+                try {
+                    AmanSupabase.postgrest.from("telecom_providers")
+                        .select { filter { eq("id", record.providerId) } }
+                        .decodeSingleOrNull<TelecomProvider>()
+                } catch (_: Exception) { null }
+            } else null
+
+            AmanResult.Success(record.copy(customerNumber = number, provider = provider))
+        } catch (e: Exception) {
+            AmanResult.Error(AmanError.DatabaseError("تعذر جلب تفاصيل المهمة: ${e.message}", cause = e))
+        }
+    }
 
     override suspend fun getAllTasks(): AmanResult<List<PaymentTask>> {
         if (!AmanSupabase.isConfigured()) return AmanResult.Error(AmanError.ConfigurationError("Supabase غير مهيأ"))

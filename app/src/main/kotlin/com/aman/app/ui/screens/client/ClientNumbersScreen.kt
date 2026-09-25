@@ -31,7 +31,8 @@ fun ClientNumbersScreen(
     onMenuClick: () -> Unit,
     onNavigateToAddNumber: () -> Unit,
     onNavigateToCreateRequest: (String) -> Unit,
-    onNavigateToNotifications: () -> Unit
+    onNavigateToNotifications: () -> Unit,
+    onNumberClick: (String) -> Unit = {}
 ) {
     val listState by viewModel.listState.collectAsState()
 
@@ -108,6 +109,7 @@ fun ClientNumbersScreen(
                             items(state.numbers) { number ->
                                 CustomerNumberItemCard(
                                     number = number,
+                                    onCardClick = { onNumberClick(number.id) },
                                     onRequestProtection = { onNavigateToCreateRequest(number.id) }
                                 )
                             }
@@ -126,9 +128,12 @@ fun ClientNumbersScreen(
 @Composable
 private fun CustomerNumberItemCard(
     number: CustomerNumber,
+    onCardClick: () -> Unit = {},
     onRequestProtection: () -> Unit
 ) {
-    AmanCard {
+    AmanCard(
+        modifier = Modifier.clickable(onClick = onCardClick)
+    ) {
         Column(modifier = Modifier.fillMaxWidth()) {
             Row(
                 modifier = Modifier.fillMaxWidth(),

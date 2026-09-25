@@ -198,6 +198,9 @@ fun AmanNavGraph(
                         },
                         onNavigateToNotifications = {
                             navController.navigate(Screen.Notifications.route)
+                        },
+                        onNumberClick = { numberId ->
+                            navController.navigate(Screen.ClientNumberDetail.createRoute(numberId))
                         }
                     )
                 }
@@ -227,6 +230,9 @@ fun AmanNavGraph(
                         },
                         onNavigateToNotifications = {
                             navController.navigate(Screen.Notifications.route)
+                        },
+                        onProtectionClick = { protectionId ->
+                            navController.navigate(Screen.ProtectionDetail.createRoute(protectionId))
                         }
                     )
                 }
@@ -243,6 +249,9 @@ fun AmanNavGraph(
                         },
                         onNavigateToNotifications = {
                             navController.navigate(Screen.Notifications.route)
+                        },
+                        onRequestClick = { requestId ->
+                            navController.navigate(Screen.ProtectionRequestDetail.createRoute(requestId))
                         }
                     )
                 }
@@ -287,6 +296,60 @@ fun AmanNavGraph(
                         onNavigateToAddNumber = {
                             navController.navigate(Screen.AddNumber.route)
                         }
+                    )
+                }
+
+                // Detail Screen: Customer Number
+                composable(
+                    route = Screen.ClientNumberDetail.route,
+                    arguments = listOf(navArgument("numberId") { type = NavType.StringType })
+                ) { backStackEntry ->
+                    val numberId = backStackEntry.arguments?.getString("numberId") ?: ""
+                    ClientNumberDetailScreen(
+                        numberId = numberId,
+                        onBack = { navController.popBackStack() },
+                        onActivateProtection = { numId ->
+                            navController.navigate("client/create_request?numberId=$numId")
+                        }
+                    )
+                }
+
+                // Detail Screen: Protection
+                composable(
+                    route = Screen.ProtectionDetail.route,
+                    arguments = listOf(navArgument("protectionId") { type = NavType.StringType })
+                ) { backStackEntry ->
+                    val protectionId = backStackEntry.arguments?.getString("protectionId") ?: ""
+                    ClientProtectionDetailScreen(
+                        protectionId = protectionId,
+                        onBack = { navController.popBackStack() },
+                        onRenewProtection = { numId ->
+                            navController.navigate("client/create_request?numberId=$numId")
+                        }
+                    )
+                }
+
+                // Detail Screen: Protection Request
+                composable(
+                    route = Screen.ProtectionRequestDetail.route,
+                    arguments = listOf(navArgument("requestId") { type = NavType.StringType })
+                ) { backStackEntry ->
+                    val requestId = backStackEntry.arguments?.getString("requestId") ?: ""
+                    ProtectionRequestDetailScreen(
+                        requestId = requestId,
+                        onBack = { navController.popBackStack() }
+                    )
+                }
+
+                // Detail Screen: Admin Payment Task
+                composable(
+                    route = Screen.AdminPaymentTaskDetail.route,
+                    arguments = listOf(navArgument("taskId") { type = NavType.StringType })
+                ) { backStackEntry ->
+                    val taskId = backStackEntry.arguments?.getString("taskId") ?: ""
+                    AdminPaymentTaskDetailScreen(
+                        taskId = taskId,
+                        onBack = { navController.popBackStack() }
                     )
                 }
 

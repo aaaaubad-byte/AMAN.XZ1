@@ -17,7 +17,21 @@ sealed class Screen(val route: String) {
     object Privacy : Screen("privacy")
     object About : Screen("about")
 
-    // Administration Screens (Stage 4)
+    // Detail Screens
+    object ClientNumberDetail : Screen("client_numbers/{numberId}") {
+        fun createRoute(numberId: String) = "client_numbers/$numberId"
+    }
+    object ProtectionDetail : Screen("protections/{protectionId}") {
+        fun createRoute(protectionId: String) = "protections/$protectionId"
+    }
+    object ProtectionRequestDetail : Screen("protection_requests/{requestId}") {
+        fun createRoute(requestId: String) = "protection_requests/$requestId"
+    }
+    object AdminPaymentTaskDetail : Screen("admin_payment_task_detail/{taskId}") {
+        fun createRoute(taskId: String) = "admin_payment_task_detail/$taskId"
+    }
+
+    // Administration Screens
     object AdminDashboard : Screen("admin_dashboard")
     object AdminCustomers : Screen("admin_customers")
     object AdminCustomerNumbers : Screen("admin_customer_numbers")
