@@ -54,6 +54,9 @@ class ProtectionRequestsViewModel(
     private val _createState = MutableStateFlow<CreateRequestUiState>(CreateRequestUiState.Loading)
     val createState: StateFlow<CreateRequestUiState> = _createState.asStateFlow()
 
+    private var currentCustomerId: String? = null
+    private var existingPendingRequests: List<ProtectionRequest> = emptyList()
+
     fun setFilterTab(tab: RequestFilterTab) {
         _selectedFilterTab.value = tab
     }
@@ -83,10 +86,16 @@ class ProtectionRequestsViewModel(
             return
         }
 
+        currentCustomerId = customerId
         _createState.value = CreateRequestUiState.Loading
         viewModelScope.launch {
             val numbersRes = numberRepo.getNumbersByCustomer(customerId)
             val paymentMethodsRes = paymentRepo.getActivePaymentMethods()
+            val requestsRes = requestRepo.getCustomerRequests(customerId)
+
+            if (requestsRes is AmanResult.Success) {
+                existingPendingRequests = requestsRes.data.filter { it.status == RequestStatus.PENDING }
+            }
 
             if (numbersRes is AmanResult.Success && paymentMethodsRes is AmanResult.Success) {
                 val numbers = numbersRes.data
@@ -151,27 +160,59 @@ class ProtectionRequestsViewModel(
         val current = _createState.value
         if (current !is CreateRequestUiState.Ready) return
 
-        val number = current.selectedNumber
-        val plan = current.selectedPlan
-        val paymentMethod = current.selectedPaymentMethod
+        val custId = currentCustomerId
+        if (custId.isNullOrBlank()) {
+            _createState.value = CreateRequestUiState.Error("المستخدم غير مسجل الدخول")
+            return
+        }
 
+        val number = current.selectedNumber
         if (number == null) {
             _createState.value = CreateRequestUiState.Error("يرجى اختيار رقم الهاتف المراد حمايته")
             return
         }
-        if (number.protectionStatus == NumberProtectionStatus.PENDING) {
-            _createState.value = CreateRequestUiState.Error("يوجد بالفعل طلب حماية قيد المراجعة لهذا الرقم. يرجى انتظار قرار الإدارة قبل تقديم طلب جديد.")
+
+        // Validate customer is operating on their own number
+        if (number.customerId.isNotBlank() && number.customerId != custId) {
+            _createState.value = CreateRequestUiState.Error("الرقم المحدد لا يتبع حساب هذا العميل")
             return
         }
+
+        // Validate selected provider exists on number
+        if (number.providerId.isBlank()) {
+            _createState.value = CreateRequestUiState.Error("لم يتم تحديد شركة الاتصالات التابع لها هذا الرقم")
+            return
+        }
+
+        // Validate duplicate pending protection request
+        val isPending = number.protectionStatus == NumberProtectionStatus.PENDING ||
+                existingPendingRequests.any { it.customerNumberId == number.id && it.status == RequestStatus.PENDING }
+        if (isPending) {
+            _createState.value = CreateRequestUiState.Error("يوجد بالفعل طلب حماية قيد المراجعة لهذا الرقم. لا يمكن تقديم طلب إضافي حتى تتم معالجة الطلب السابق.")
+            return
+        }
+
+        val plan = current.selectedPlan
         if (plan == null) {
             _createState.value = CreateRequestUiState.Error("يرجى اختيار باقة الحماية")
             return
         }
-        if (paymentMethod == null) {
-            _createState.value = CreateRequestUiState.Error("يرجى اختيار طريقة الدفع")
+
+        // Validate selected plan belongs to the selected provider
+        if (plan.providerId != number.providerId) {
+            _createState.value = CreateRequestUiState.Error("الباقة المختارة لا تتوافق مع شركة الاتصالات الخاصة بالرقم")
             return
         }
-        if (transferData.isBlank()) {
+
+        val paymentMethod = current.selectedPaymentMethod
+        if (paymentMethod == null) {
+            _createState.value = CreateRequestUiState.Error("يرجى اختيار وسيلة الدفع")
+            return
+        }
+
+        // Validate transfer data is present and not empty
+        val cleanTransfer = transferData.trim()
+        if (cleanTransfer.isBlank()) {
             _createState.value = CreateRequestUiState.Error("يرجى إدخال بيانات أو رقم الحوالة / السند المالي")
             return
         }
@@ -182,7 +223,7 @@ class ProtectionRequestsViewModel(
                 customerNumberId = number.id,
                 planId = plan.id,
                 paymentMethodId = paymentMethod.id,
-                transferData = transferData.trim()
+                transferData = cleanTransfer
             )) {
                 is AmanResult.Success -> {
                     _createState.value = CreateRequestUiState.SubmittedSuccess(res.data)

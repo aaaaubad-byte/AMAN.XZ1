@@ -83,7 +83,7 @@ fun AmanNavGraph(
                     SplashScreen(
                         onTimeout = {
                             authViewModel.restoreSession { restoredUser ->
-                                if (restoredUser != null) {
+                                if (restoredUser != null && restoredUser.accountStatus == "active") {
                                     currentUser = restoredUser
                                     val destination = if (restoredUser.role.isManagerOrAdmin) {
                                         Screen.AdminDashboard.route
@@ -94,6 +94,7 @@ fun AmanNavGraph(
                                         popUpTo(Screen.Splash.route) { inclusive = true }
                                     }
                                 } else {
+                                    currentUser = null
                                     navController.navigate(Screen.Login.route) {
                                         popUpTo(Screen.Splash.route) { inclusive = true }
                                     }
@@ -109,14 +110,18 @@ fun AmanNavGraph(
                         viewModel = authViewModel,
                         onLoginSuccess = {
                             authViewModel.restoreSession { user ->
-                                currentUser = user
-                                val destination = if (user?.role?.isManagerOrAdmin == true) {
-                                    Screen.AdminDashboard.route
+                                if (user != null && user.accountStatus == "active") {
+                                    currentUser = user
+                                    val destination = if (user.role.isManagerOrAdmin) {
+                                        Screen.AdminDashboard.route
+                                    } else {
+                                        Screen.ClientHome.route
+                                    }
+                                    navController.navigate(destination) {
+                                        popUpTo(Screen.Login.route) { inclusive = true }
+                                    }
                                 } else {
-                                    Screen.ClientHome.route
-                                }
-                                navController.navigate(destination) {
-                                    popUpTo(Screen.Login.route) { inclusive = true }
+                                    currentUser = null
                                 }
                             }
                         },
@@ -132,12 +137,13 @@ fun AmanNavGraph(
                         viewModel = authViewModel,
                         onRegisterSuccess = {
                             authViewModel.restoreSession { user ->
-                                if (user != null) {
+                                if (user != null && user.accountStatus == "active") {
                                     currentUser = user
                                     navController.navigate(Screen.ClientHome.route) {
                                         popUpTo(Screen.Register.route) { inclusive = true }
                                     }
                                 } else {
+                                    currentUser = null
                                     navController.navigate(Screen.Login.route) {
                                         popUpTo(Screen.Register.route) { inclusive = true }
                                     }
@@ -307,10 +313,7 @@ fun AmanNavGraph(
                     val numberId = backStackEntry.arguments?.getString("numberId") ?: ""
                     ClientNumberDetailScreen(
                         numberId = numberId,
-                        onBack = { navController.popBackStack() },
-                        onActivateProtection = { numId ->
-                            navController.navigate("client/create_request?numberId=$numId")
-                        }
+                        onBack = { navController.popBackStack() }
                     )
                 }
 

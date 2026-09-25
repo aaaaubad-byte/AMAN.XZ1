@@ -167,7 +167,7 @@ class AuthViewModel(
                     }
                 }
                 is AmanResult.Error -> {
-                    _uiState.value = AuthUiState.Idle
+                    _uiState.value = AuthUiState.Error(result.error.message)
                     onResult(null)
                 }
             }

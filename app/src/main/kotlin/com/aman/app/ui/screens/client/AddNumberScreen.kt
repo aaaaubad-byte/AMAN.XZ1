@@ -107,15 +107,20 @@ fun AddNumberScreen(
                             )
                         )
 
+                        val targetLength = detectedProvider?.numberLength
+                        val maxAllowedDigits = targetLength ?: 15
+                        val isValidLength = targetLength != null && phoneNumber.length == targetLength
+
                         OutlinedTextField(
                             value = phoneNumber,
                             onValueChange = { input ->
-                                if (input.length <= 9 && input.all { it.isDigit() }) {
+                                val limit = detectedProvider?.numberLength ?: 15
+                                if (input.length <= limit && input.all { it.isDigit() }) {
                                     phoneNumber = input
                                     viewModel.onPhoneNumberChanged(input)
                                 }
                             },
-                            placeholder = { Text("مثال: 771234567") },
+                            placeholder = { Text("أدخل رقم الهاتف...") },
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true,
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -135,8 +140,8 @@ fun AddNumberScreen(
                             },
                             trailingIcon = {
                                 Text(
-                                    text = "${phoneNumber.length}/9",
-                                    color = if (phoneNumber.length == 9) Primary else TextDisabled,
+                                    text = if (targetLength != null) "${phoneNumber.length}/$targetLength" else "${phoneNumber.length}",
+                                    color = if (isValidLength) Primary else TextDisabled,
                                     fontSize = 12.sp,
                                     modifier = Modifier.padding(end = 12.dp)
                                 )
@@ -233,7 +238,7 @@ fun AddNumberScreen(
                         AmanButton(
                             text = if (addState is AddNumberUiState.Submitting) "جارٍ تسجيل الرقم..." else "تسجيل الرقم وحفظه",
                             onClick = { viewModel.submitNewNumber(phoneNumber) },
-                            enabled = phoneNumber.length == 9 && addState !is AddNumberUiState.Submitting
+                            enabled = isValidLength && addState !is AddNumberUiState.Submitting
                         )
                     }
                 }

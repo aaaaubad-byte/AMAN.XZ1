@@ -220,24 +220,10 @@ class CustomerNumberRepositoryImpl : CustomerNumberRepository {
                 }
             }
 
-            // 3. Known Yemeni telecom providers fallback
-            val sub2 = cleanDigits.take(2)
-            val allProviders = try {
-                AmanSupabase.postgrest.from("telecom_providers").select().decodeList<TelecomProvider>()
-            } catch (_: Exception) {
-                emptyList()
-            }
-
-            val matched = when (sub2) {
-                "77", "78" -> allProviders.find { it.name.contains("يمن") || it.name.contains("Yemen") }
-                "73" -> allProviders.find { it.name.contains("يو") || it.name.contains("YOU") }
-                "71" -> allProviders.find { it.name.contains("سبأ") || it.name.contains("Saba") }
-                "70" -> allProviders.find { it.name.contains("واي") || it.name.contains("Y ") || it.name == "Y" }
-                else -> null
-            }
-            AmanResult.Success(matched)
-        } catch (e: Exception) {
+            // No hardcoded mapping fallback; return null if prefix not found in configured system data
             AmanResult.Success(null)
+        } catch (e: Exception) {
+            AmanResult.Error(AmanError.DatabaseError("تعذر التحقق من بادئة الرقم: ${e.message}", cause = e))
         }
     }
 
@@ -508,63 +494,18 @@ class ProtectionRequestRepositoryImpl : ProtectionRequestRepository {
                 put("note", transferData.trim())
             }
 
-            // 1. Try RPC create_protection_request if available
-            val rpcResult = try {
-                val params = buildJsonObject {
-                    put("p_customer_number_id", customerNumberId)
-                    put("p_plan_id", planId)
-                    put("p_payment_method_id", paymentMethodId)
-                    put("p_transfer_data", transferDataObj)
-                }
-                AmanSupabase.postgrest.rpc(
-                    function = "create_protection_request",
-                    parameters = params
-                ).decodeAs<ProtectionRequest>()
-            } catch (_: Exception) {
-                null
+            val params = buildJsonObject {
+                put("p_customer_number_id", customerNumberId)
+                put("p_plan_id", planId)
+                put("p_payment_method_id", paymentMethodId)
+                put("p_transfer_data", transferDataObj)
             }
+            val request = AmanSupabase.postgrest.rpc(
+                function = "create_protection_request",
+                parameters = params
+            ).decodeAs<ProtectionRequest>()
 
-            if (rpcResult != null) return AmanResult.Success(rpcResult)
-
-            // 2. Direct insert fallback
-            val user = AmanSupabase.auth.currentUserOrNull()
-                ?: return AmanResult.Error(AmanError.AuthenticationError("يجب تسجيل الدخول لتقديم طلب الحماية"))
-
-            val number = AmanSupabase.postgrest.from("customer_numbers")
-                .select { filter { eq("id", customerNumberId) } }
-                .decodeSingle<CustomerNumber>()
-
-            val plan = AmanSupabase.postgrest.from("protection_plans")
-                .select { filter { eq("id", planId) } }
-                .decodeSingle<ProtectionPlan>()
-
-            val insertData = buildJsonObject {
-                put("customer_id", user.id)
-                put("customer_number_id", customerNumberId)
-                put("provider_id", number.providerId)
-                put("plan_id", planId)
-                put("payment_method_id", paymentMethodId)
-                put("protection_value", plan.price)
-                put("plan_name_snapshot", plan.name)
-                put("plan_duration_days_snapshot", plan.durationDays)
-                put("transfer_data", transferDataObj)
-                put("status", "pending")
-            }
-
-            val inserted = AmanSupabase.postgrest.from("protection_requests")
-                .insert(insertData) {
-                    select()
-                }.decodeSingle<ProtectionRequest>()
-
-            try {
-                AmanSupabase.postgrest.from("customer_numbers").update({
-                    set("protection_status", "pending")
-                }) {
-                    filter { eq("id", customerNumberId) }
-                }
-            } catch (_: Exception) {}
-
-            AmanResult.Success(inserted)
+            AmanResult.Success(request)
         } catch (e: Exception) {
             val msg = if (e.message?.contains("unique_pending_request_per_number", ignoreCase = true) == true ||
                 e.message?.contains("CONFLICTING_REQUEST_EXISTS", ignoreCase = true) == true) {
@@ -799,8 +740,12 @@ class SystemSettingsRepositoryImpl : SystemSettingsRepository {
         return try {
             val settings = AmanSupabase.postgrest.from("system_settings")
                 .select()
-                .decodeSingleOrNull<SystemSettings>() ?: SystemSettings()
-            AmanResult.Success(settings)
+                .decodeSingleOrNull<SystemSettings>()
+            if (settings != null) {
+                AmanResult.Success(settings)
+            } else {
+                AmanResult.Error(AmanError.DatabaseError("لم يتم العثور على إعدادات النظام في قاعدة البيانات"))
+            }
         } catch (e: Exception) {
             AmanResult.Error(AmanError.DatabaseError("تعذر جلب إعدادات النظام: ${e.message}", cause = e))
         }

@@ -25,7 +25,8 @@ sealed interface ClientHomeUiState {
         val needsRenewalCount: Int,
         val expiredCount: Int,
         val pendingRequestsCount: Int,
-        val unreadNotificationsCount: Int
+        val unreadNotificationsCount: Int,
+        val renewalThresholdDays: Int
     ) : ClientHomeUiState
     data class Error(val message: String) : ClientHomeUiState
 }
@@ -34,7 +35,8 @@ class ClientHomeViewModel(
     private val numberRepo: CustomerNumberRepository = CustomerNumberRepositoryImpl(),
     private val protectionRepo: ProtectionRepository = ProtectionRepositoryImpl(),
     private val requestRepo: ProtectionRequestRepository = ProtectionRequestRepositoryImpl(),
-    private val notificationRepo: NotificationRepository = NotificationRepositoryImpl()
+    private val notificationRepo: NotificationRepository = NotificationRepositoryImpl(),
+    private val settingsRepo: SystemSettingsRepository = SystemSettingsRepositoryImpl()
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<ClientHomeUiState>(ClientHomeUiState.Uninitialized)
@@ -53,6 +55,13 @@ class ClientHomeViewModel(
 
         _uiState.value = ClientHomeUiState.Loading
         viewModelScope.launch {
+            val settingsResult = settingsRepo.getSettings()
+            if (settingsResult is AmanResult.Error) {
+                _uiState.value = ClientHomeUiState.Error("تعذر تحميل إعدادات النظام: ${settingsResult.error.message}")
+                return@launch
+            }
+            val threshold = (settingsResult as AmanResult.Success).data.renewalThresholdDays
+
             val numbersResult = numberRepo.getNumbersByCustomer(customerId)
             val protectionsResult = protectionRepo.getCustomerProtections(customerId)
             val requestsResult = requestRepo.getCustomerRequests(customerId)
@@ -66,9 +75,9 @@ class ClientHomeViewModel(
             if (numbers.isEmpty() && protections.isEmpty() && requests.isEmpty()) {
                 _uiState.value = ClientHomeUiState.Empty
             } else {
-                val activeCount = protections.count { it.calculateDisplayStatus() == ProtectionDisplayStatus.ACTIVE }
-                val needsRenewalCount = protections.count { it.calculateDisplayStatus() == ProtectionDisplayStatus.NEEDS_RENEWAL }
-                val expiredCount = protections.count { it.calculateDisplayStatus() == ProtectionDisplayStatus.EXPIRED }
+                val activeCount = protections.count { it.calculateDisplayStatus(threshold) == ProtectionDisplayStatus.ACTIVE }
+                val needsRenewalCount = protections.count { it.calculateDisplayStatus(threshold) == ProtectionDisplayStatus.NEEDS_RENEWAL }
+                val expiredCount = protections.count { it.calculateDisplayStatus(threshold) == ProtectionDisplayStatus.EXPIRED }
                 val pendingRequestsCount = requests.count { it.status.name.lowercase() == "pending" }
 
                 _uiState.value = ClientHomeUiState.Content(
@@ -78,7 +87,8 @@ class ClientHomeViewModel(
                     needsRenewalCount = needsRenewalCount,
                     expiredCount = expiredCount,
                     pendingRequestsCount = pendingRequestsCount,
-                    unreadNotificationsCount = unreadCount
+                    unreadNotificationsCount = unreadCount,
+                    renewalThresholdDays = threshold
                 )
             }
         }

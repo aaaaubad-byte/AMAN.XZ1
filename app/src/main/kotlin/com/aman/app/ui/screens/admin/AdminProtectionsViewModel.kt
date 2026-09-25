@@ -20,7 +20,8 @@ sealed interface AdminProtectionsUiState {
         val allProtections: List<Protection>,
         val filteredProtections: List<Protection>,
         val selectedFilter: ProtectionDisplayStatus? = null,
-        val searchQuery: String = ""
+        val searchQuery: String = "",
+        val renewalThresholdDays: Int
     ) : AdminProtectionsUiState
     data class Error(val message: String) : AdminProtectionsUiState
 }
@@ -40,11 +41,19 @@ class AdminProtectionsViewModel(
 
         _uiState.value = AdminProtectionsUiState.Loading
         viewModelScope.launch {
+            val settingsRes = adminRepo.getSystemSettings()
+            if (settingsRes is AmanResult.Error) {
+                _uiState.value = AdminProtectionsUiState.Error("تعذر تحميل إعدادات النظام: ${settingsRes.error.message}")
+                return@launch
+            }
+            val threshold = (settingsRes as AmanResult.Success).data.renewalThresholdDays
+
             when (val res = adminRepo.getAllProtections()) {
                 is AmanResult.Success -> {
                     _uiState.value = AdminProtectionsUiState.Content(
                         allProtections = res.data,
-                        filteredProtections = res.data
+                        filteredProtections = res.data,
+                        renewalThresholdDays = threshold
                     )
                 }
                 is AmanResult.Error -> {
@@ -56,7 +65,7 @@ class AdminProtectionsViewModel(
 
     fun setFilter(status: ProtectionDisplayStatus?) {
         val current = _uiState.value as? AdminProtectionsUiState.Content ?: return
-        val filtered = filterList(current.allProtections, status, current.searchQuery)
+        val filtered = filterList(current.allProtections, status, current.searchQuery, current.renewalThresholdDays)
         _uiState.value = current.copy(
             selectedFilter = status,
             filteredProtections = filtered
@@ -65,7 +74,7 @@ class AdminProtectionsViewModel(
 
     fun onSearchQueryChanged(query: String) {
         val current = _uiState.value as? AdminProtectionsUiState.Content ?: return
-        val filtered = filterList(current.allProtections, current.selectedFilter, query)
+        val filtered = filterList(current.allProtections, current.selectedFilter, query, current.renewalThresholdDays)
         _uiState.value = current.copy(
             searchQuery = query,
             filteredProtections = filtered
@@ -75,10 +84,11 @@ class AdminProtectionsViewModel(
     private fun filterList(
         list: List<Protection>,
         status: ProtectionDisplayStatus?,
-        query: String
+        query: String,
+        threshold: Int
     ): List<Protection> {
         return list.filter { prot ->
-            val matchesStatus = if (status == null) true else prot.calculateDisplayStatus() == status
+            val matchesStatus = if (status == null) true else prot.calculateDisplayStatus(threshold) == status
             val matchesQuery = if (query.isBlank()) true else {
                 prot.customerNumber?.phoneNumber?.contains(query, ignoreCase = true) == true ||
                 prot.customerId.contains(query, ignoreCase = true)

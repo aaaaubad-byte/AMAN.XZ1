@@ -35,6 +35,8 @@ class AdminPaymentTasksViewModel(
     private val _message = MutableStateFlow<String?>(null)
     val message: StateFlow<String?> = _message.asStateFlow()
 
+    private var loadedSettingsByProvider: Map<String, TaskSettings> = emptyMap()
+
     fun clearMessage() {
         _message.value = null
     }
@@ -81,14 +83,15 @@ class AdminPaymentTasksViewModel(
                 is AmanResult.Success -> {
                     val settingsMap = when (val settingsResult = adminRepo.getTaskSettings()) {
                         is AmanResult.Success -> settingsResult.data.associateBy { it.providerId }
-                        is AmanResult.Error -> emptyMap()
+                        is AmanResult.Error -> loadedSettingsByProvider
                     }
+                    loadedSettingsByProvider = settingsMap
 
                     val currentFilter = (_uiState.value as? AdminTasksUiState.Content)?.selectedStatus
                     val filtered = if (currentFilter == null) {
                         tasksResult.data
                     } else {
-                        filterTasks(tasksResult.data, currentFilter, settingsMap)
+                        filterTasks(tasksResult.data, currentFilter, loadedSettingsByProvider)
                     }
                     _uiState.value = AdminTasksUiState.Content(
                         allTasks = tasksResult.data,
@@ -105,7 +108,7 @@ class AdminPaymentTasksViewModel(
 
     fun setFilter(status: TaskStatus?) {
         val current = _uiState.value as? AdminTasksUiState.Content ?: return
-        val filtered = filterTasks(current.allTasks, status, emptyMap())
+        val filtered = filterTasks(current.allTasks, status, loadedSettingsByProvider)
         _uiState.value = current.copy(
             selectedStatus = status,
             filteredTasks = filtered

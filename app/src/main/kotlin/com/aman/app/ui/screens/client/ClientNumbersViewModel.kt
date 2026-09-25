@@ -85,6 +85,17 @@ class ClientNumbersViewModel(
             return
         }
 
+        val provider = _detectedProvider.value
+        if (provider == null) {
+            _addState.value = AddNumberUiState.Error("لم يتم التعرف على شركة الاتصالات التابع لها هذا الرقم")
+            return
+        }
+
+        if (cleanNumber.length != provider.numberLength) {
+            _addState.value = AddNumberUiState.Error("طول الرقم غير صحيح. يجب أن يتكون من ${provider.numberLength} أرقام لمزود ${provider.name}")
+            return
+        }
+
         _addState.value = AddNumberUiState.Submitting
         viewModelScope.launch {
             when (val res = numberRepo.registerCustomerNumber(cleanNumber)) {

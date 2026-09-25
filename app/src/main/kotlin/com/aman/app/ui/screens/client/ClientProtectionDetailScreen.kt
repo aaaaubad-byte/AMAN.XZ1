@@ -22,6 +22,8 @@ import com.aman.app.data.model.Protection
 import com.aman.app.data.model.ProtectionDisplayStatus
 import com.aman.app.data.repository.ProtectionRepository
 import com.aman.app.data.repository.ProtectionRepositoryImpl
+import com.aman.app.data.repository.SystemSettingsRepository
+import com.aman.app.data.repository.SystemSettingsRepositoryImpl
 import com.aman.app.ui.components.*
 import com.aman.app.ui.theme.*
 import kotlinx.coroutines.launch
@@ -40,9 +42,11 @@ fun ClientProtectionDetailScreen(
     protectionId: String,
     onBack: () -> Unit,
     onRenewProtection: (String) -> Unit,
-    repository: ProtectionRepository = remember { ProtectionRepositoryImpl() }
+    repository: ProtectionRepository = remember { ProtectionRepositoryImpl() },
+    settingsRepository: SystemSettingsRepository = remember { SystemSettingsRepositoryImpl() }
 ) {
     var protection by remember { mutableStateOf<Protection?>(null) }
+    var renewalThreshold by remember { mutableStateOf<Int?>(null) }
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
@@ -51,6 +55,14 @@ fun ClientProtectionDetailScreen(
         isLoading = true
         errorMessage = null
         scope.launch {
+            val settingsRes = settingsRepository.getSettings()
+            if (settingsRes is AmanResult.Error) {
+                errorMessage = "تعذر تحميل إعدادات النظام: ${settingsRes.error.message}"
+                isLoading = false
+                return@launch
+            }
+            renewalThreshold = (settingsRes as AmanResult.Success).data.renewalThresholdDays
+
             when (val res = repository.getProtectionDetails(protectionId)) {
                 is AmanResult.Success -> {
                     protection = res.data
@@ -112,9 +124,10 @@ fun ClientProtectionDetailScreen(
                         onButtonClick = { loadData() }
                     )
                 }
-                protection != null -> {
+                protection != null && renewalThreshold != null -> {
                     val prot = protection!!
-                    val displayStatus = prot.calculateDisplayStatus()
+                    val threshold = renewalThreshold!!
+                    val displayStatus = prot.calculateDisplayStatus(threshold)
                     val daysLeft = prot.daysRemaining()
 
                     Column(

@@ -106,7 +106,7 @@ fun ClientProtectionsScreen(
                     }
 
                     is ProtectionsUiState.Success -> {
-                        val filteredList = viewModel.getFilteredProtections(state.protections, selectedTab)
+                        val filteredList = viewModel.getFilteredProtections(state.protections, selectedTab, state.renewalThresholdDays)
 
                         if (filteredList.isEmpty()) {
                             val emptyDesc = when (selectedTab) {
@@ -131,6 +131,7 @@ fun ClientProtectionsScreen(
                                 items(filteredList) { protection ->
                                     ProtectionDetailCard(
                                         protection = protection,
+                                        warningDaysThreshold = state.renewalThresholdDays,
                                         onClick = { onProtectionClick(protection.id) },
                                         onRenew = { onNavigateToCreateRequest(protection.customerNumberId) }
                                     )
@@ -151,10 +152,11 @@ fun ClientProtectionsScreen(
 @Composable
 private fun ProtectionDetailCard(
     protection: Protection,
+    warningDaysThreshold: Int,
     onClick: () -> Unit = {},
     onRenew: () -> Unit
 ) {
-    val displayStatus = protection.calculateDisplayStatus()
+    val displayStatus = protection.calculateDisplayStatus(warningDaysThreshold)
     val daysRemaining = protection.daysRemaining()
 
     AmanCard(

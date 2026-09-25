@@ -169,6 +169,7 @@ fun AdminProtectionsScreen(
                                 items(state.filteredProtections) { prot ->
                                     AdminProtectionItemCard(
                                         prot = prot,
+                                        warningDaysThreshold = state.renewalThresholdDays,
                                         onClick = { selectedProtection = prot }
                                     )
                                 }
@@ -179,7 +180,8 @@ fun AdminProtectionsScreen(
 
                 // Protection Details Dialog
                 selectedProtection?.let { prot ->
-                    val displayStatus = prot.calculateDisplayStatus()
+                    val threshold = (uiState as? AdminProtectionsUiState.Content)?.renewalThresholdDays ?: 30
+                    val displayStatus = prot.calculateDisplayStatus(threshold)
                     val daysRemaining = prot.daysRemaining()
                     AlertDialog(
                         onDismissRequest = { selectedProtection = null },
@@ -268,9 +270,10 @@ fun AdminProtectionsScreen(
 @Composable
 fun AdminProtectionItemCard(
     prot: Protection,
+    warningDaysThreshold: Int,
     onClick: () -> Unit = {}
 ) {
-    val displayStatus = prot.calculateDisplayStatus()
+    val displayStatus = prot.calculateDisplayStatus(warningDaysThreshold)
     val daysRemaining = prot.daysRemaining()
 
     AmanCard(modifier = Modifier.clickable { onClick() }) {

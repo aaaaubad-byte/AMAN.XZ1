@@ -31,14 +31,13 @@ import kotlinx.coroutines.launch
  * - رقم الهاتف ومزود الخدمة
  * - حالة الحماية
  * - تاريخ الإضافة
- * - الإجراءات: تفعيل الحماية، أو تقديم طلب تجديد
+ * - ممنوع: زر «طلب حماية» داخل تفاصيل الرقم
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ClientNumberDetailScreen(
     numberId: String,
     onBack: () -> Unit,
-    onActivateProtection: (String) -> Unit,
     repository: CustomerNumberRepository = remember { CustomerNumberRepositoryImpl() }
 ) {
     var number by remember { mutableStateOf<CustomerNumber?>(null) }
@@ -187,22 +186,6 @@ fun ClientNumberDetailScreen(
                                         )
                                     }
                                 }
-                            }
-                        }
-
-                        // Action Button
-                        if (num.protectionStatus == NumberProtectionStatus.UNPROTECTED) {
-                            AmanButton(
-                                text = "تفعيل الحماية لهذا الرقم",
-                                onClick = { onActivateProtection(num.id) }
-                            )
-                        } else if (num.protectionStatus == NumberProtectionStatus.PROTECTED) {
-                            OutlinedButton(
-                                onClick = { onActivateProtection(num.id) },
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(12.dp)
-                            ) {
-                                Text("طلب تجديد الحماية مبكراً", fontWeight = FontWeight.Bold)
                             }
                         }
                     }

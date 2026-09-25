@@ -324,6 +324,7 @@ fun ClientHomeScreen(
                             items(state.protections.take(3)) { protection ->
                                 HomeProtectionItem(
                                     protection = protection,
+                                    warningDaysThreshold = state.renewalThresholdDays,
                                     onRenew = { onNavigateToCreateRequest(protection.customerNumberId) }
                                 )
                             }
@@ -383,9 +384,10 @@ private fun HomeNumberItem(
 @Composable
 private fun HomeProtectionItem(
     protection: Protection,
+    warningDaysThreshold: Int,
     onRenew: () -> Unit
 ) {
-    val displayStatus = protection.calculateDisplayStatus()
+    val displayStatus = protection.calculateDisplayStatus(warningDaysThreshold)
     val daysRemaining = protection.daysRemaining()
 
     AmanCard {

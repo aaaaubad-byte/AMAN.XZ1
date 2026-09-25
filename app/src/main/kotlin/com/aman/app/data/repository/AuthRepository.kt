@@ -70,6 +70,15 @@ class AuthRepository : AuthRepositoryContract {
                 }.decodeSingleOrNull<AppUser>()
 
             if (userRecord != null) {
+                if (userRecord.accountStatus != "active") {
+                    try { AmanSupabase.auth.signOut() } catch (_: Exception) {}
+                    val statusMsg = when (userRecord.accountStatus.lowercase()) {
+                        "suspended" -> "تم تعليق هذا الحساب من قِبل إدارة النظام. يرجى التواصل مع الدعم الفني."
+                        "disabled" -> "هذا الحساب معطل. يرجى مراجعة إدارة المنظومة."
+                        else -> "حالة الحساب غير نشطة (${userRecord.accountStatus}). لا يمكن تسجيل الدخول."
+                    }
+                    return AmanResult.Error(AmanError.AuthenticationError(statusMsg))
+                }
                 AmanResult.Success(userRecord)
             } else {
                 AmanResult.Error(AmanError.AuthenticationError("ملف المستخدم غير موجود في النظام. يرجى التواصل مع الإدارة"))
@@ -222,6 +231,16 @@ class AuthRepository : AuthRepositoryContract {
                     ?: authUser.userMetadata?.get("full_name")?.toString(),
                 rawRole = authUser.userMetadata?.get("role")?.toString(),
             )
+
+            if (resolvedUser.accountStatus != "active") {
+                try { AmanSupabase.auth.signOut() } catch (_: Exception) {}
+                val statusMsg = when (resolvedUser.accountStatus.lowercase()) {
+                    "suspended" -> "تم تعليق هذا الحساب من قِبل إدارة النظام. يرجى التواصل مع الدعم الفني."
+                    "disabled" -> "هذا الحساب معطل. يرجى مراجعة إدارة المنظومة."
+                    else -> "حالة الحساب غير نشطة (${resolvedUser.accountStatus}). لا يمكن المتابعة."
+                }
+                return AmanResult.Error(AmanError.AuthenticationError(statusMsg))
+            }
 
             AmanResult.Success(resolvedUser)
         } catch (e: Exception) {
