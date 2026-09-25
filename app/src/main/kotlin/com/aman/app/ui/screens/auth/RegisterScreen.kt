@@ -8,6 +8,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
@@ -34,6 +35,7 @@ import com.aman.app.ui.theme.*
  * - كلمة المرور
  * - تأكيد كلمة المرور
  * - زر إنشاء الحساب
+ * - معالجة حالة تأكيد البريد ومنع الدخول دون Session معتمدة
  */
 @Composable
 fun RegisterScreen(
@@ -218,5 +220,47 @@ fun RegisterScreen(
         }
 
         Spacer(modifier = Modifier.height(24.dp))
+    }
+
+    // Awaiting Email Confirmation Dialog
+    if (uiState is AuthUiState.AwaitingEmailConfirmation) {
+        val confirmedEmail = (uiState as AuthUiState.AwaitingEmailConfirmation).email
+        AlertDialog(
+            onDismissRequest = { /* force intentional navigation */ },
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.CheckCircle,
+                    contentDescription = null,
+                    tint = Success,
+                    modifier = Modifier.size(48.dp)
+                )
+            },
+            title = {
+                Text(
+                    text = "تأكيد البريد الإلكتروني",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                )
+            },
+            text = {
+                Text(
+                    text = "تم إنشاء الحساب بنجاح! أرسلنا رابط تأكيد إلى: $confirmedEmail.
+
+يرجى فتح بريدك والضغط على رابط التفعيل ثم تسجيل الدخول للوصول إلى حسابك.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = TextPrimary
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.resetError()
+                        onNavigateToLogin()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Primary)
+                ) {
+                    Text("الانتقال إلى تسجيل الدخول")
+                }
+            }
+        )
     }
 }

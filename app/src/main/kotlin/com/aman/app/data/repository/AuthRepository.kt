@@ -25,10 +25,17 @@ import kotlinx.serialization.json.put
 interface AuthRepositoryContract {
     val sessionStatus: Flow<SessionStatus>
     suspend fun signIn(email: String, pass: String): AmanResult<AppUser>
-    suspend fun signUp(name: String, email: String, pass: String): AmanResult<AppUser>
+    suspend fun signUp(name: String, email: String, pass: String): AmanResult<AuthSignUpResult>
     suspend fun resetPassword(email: String): AmanResult<Unit>
+    suspend fun updatePassword(newPassword: String): AmanResult<Unit>
+    suspend fun updateProfile(name: String): AmanResult<AppUser>
     suspend fun signOut(): AmanResult<Unit>
     suspend fun getCurrentUser(): AmanResult<AppUser?>
+}
+
+sealed interface AuthSignUpResult {
+    data class Authenticated(val user: AppUser) : AuthSignUpResult
+    data class AwaitingEmailConfirmation(val email: String) : AuthSignUpResult
 }
 
 class AuthRepository : AuthRepositoryContract {
@@ -72,13 +79,11 @@ class AuthRepository : AuthRepositoryContract {
         }
     }
 
-    override suspend fun signUp(name: String, email: String, pass: String): AmanResult<AppUser> {
+        override suspend fun signUp(name: String, email: String, pass: String): AmanResult<AuthSignUpResult> {
         if (!AmanSupabase.isConfigured()) {
             return AmanResult.Error(AmanError.ConfigurationError("بيانات اتصال Supabase غير مهيأة بعد"))
         }
-
         return try {
-            // Sign up passing name in user metadata so trigger public.handle_new_auth_user() can use it
             AmanSupabase.auth.signUpWith(Email) {
                 this.email = email.trim()
                 this.password = pass
@@ -88,8 +93,14 @@ class AuthRepository : AuthRepositoryContract {
                 }
             }
 
+            // Verify if a real session was established or if email confirmation is required
+            val session = AmanSupabase.auth.currentSessionOrNull()
+            if (session == null) {
+                return AmanResult.Success(AuthSignUpResult.AwaitingEmailConfirmation(email.trim()))
+            }
+
             val currentUser = AmanSupabase.auth.currentUserOrNull()
-                ?: return AmanResult.Error(AmanError.AuthenticationError("فشل إنشاء حساب المصادقة"))
+                ?: return AmanResult.Error(AmanError.AuthenticationError("فشل استرجاع بيانات الحساب بعد التسجيل"))
 
             // Allow the trigger handle_new_auth_user() to execute and populate public.users
             var userRecord: AppUser? = null
@@ -108,13 +119,56 @@ class AuthRepository : AuthRepositoryContract {
 
             if (userRecord == null) {
                 return AmanResult.Error(
-                    AmanError.AuthenticationError("لم يتم إنشاء حساب المستخدم في قاعدة التطبيق بعد تسجيل الحساب. يرجى المحاولة مرة أخرى أو التواصل مع الإدارة.")
+                    AmanError.AuthenticationError("لم يتم إنشاء ملف العميل في قاعدة البيانات. يرجى تسجيل الدخول أو مراجعة الدعم الفني.")
                 )
             }
 
-            AmanResult.Success(userRecord)
+            AmanResult.Success(AuthSignUpResult.Authenticated(userRecord))
         } catch (e: Exception) {
             AmanResult.Error(AmanError.AuthenticationError("فشل إنشاء الحساب: ${e.message}", e))
+        }
+    }
+
+    override suspend fun updatePassword(newPassword: String): AmanResult<Unit> {
+        if (!AmanSupabase.isConfigured()) {
+            return AmanResult.Error(AmanError.ConfigurationError("بيانات اتصال Supabase غير مهيأة بعد"))
+        }
+        return try {
+            AmanSupabase.auth.modifyUser {
+                password = newPassword
+            }
+            AmanResult.Success(Unit)
+        } catch (e: Exception) {
+            AmanResult.Error(AmanError.AuthenticationError("فشل تحديث كلمة المرور: ${e.message}", e))
+        }
+    }
+
+    override suspend fun updateProfile(name: String): AmanResult<AppUser> {
+        if (!AmanSupabase.isConfigured()) {
+            return AmanResult.Error(AmanError.ConfigurationError("بيانات اتصال Supabase غير مهيأة بعد"))
+        }
+        return try {
+            val authUser = AmanSupabase.auth.currentUserOrNull()
+                ?: return AmanResult.Error(AmanError.AuthenticationError("لا يوجد مستخدم مسجل حالياً"))
+
+            AmanSupabase.auth.modifyUser {
+                data = buildJsonObject {
+                    put("name", name.trim())
+                    put("full_name", name.trim())
+                }
+            }
+
+            val updated = AmanSupabase.postgrest.from("users")
+                .update({
+                    set("name", name.trim())
+                }) {
+                    filter { eq("id", authUser.id) }
+                    select()
+                }.decodeSingle<AppUser>()
+
+            AmanResult.Success(updated)
+        } catch (e: Exception) {
+            AmanResult.Error(AmanError.DatabaseError("تعذر تحديث بيانات الحساب: ${e.message}", cause = e))
         }
     }
 

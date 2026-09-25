@@ -132,9 +132,15 @@ fun AmanNavGraph(
                         viewModel = authViewModel,
                         onRegisterSuccess = {
                             authViewModel.restoreSession { user ->
-                                currentUser = user
-                                navController.navigate(Screen.ClientHome.route) {
-                                    popUpTo(Screen.Register.route) { inclusive = true }
+                                if (user != null) {
+                                    currentUser = user
+                                    navController.navigate(Screen.ClientHome.route) {
+                                        popUpTo(Screen.Register.route) { inclusive = true }
+                                    }
+                                } else {
+                                    navController.navigate(Screen.Login.route) {
+                                        popUpTo(Screen.Register.route) { inclusive = true }
+                                    }
                                 }
                             }
                         },
@@ -296,6 +302,7 @@ fun AmanNavGraph(
                 composable(Screen.Settings.route) {
                     SettingsScreen(
                         user = currentUser,
+                        authViewModel = authViewModel,
                         onBack = { navController.popBackStack() },
                         onNavigateToHelp = { navController.navigate(Screen.Help.route) },
                         onNavigateToTerms = { navController.navigate(Screen.Terms.route) },

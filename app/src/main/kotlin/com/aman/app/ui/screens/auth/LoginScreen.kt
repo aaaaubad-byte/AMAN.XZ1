@@ -3,8 +3,10 @@ package com.aman.app.ui.screens.auth
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Info
@@ -32,7 +34,7 @@ import com.aman.app.ui.theme.*
  * - Welcome title
  * - Email field (no phone login)
  * - Password field
- * - Forgot password link
+ * - Forgot password link with interactive dialog
  * - Login button
  * - New account link
  */
@@ -46,6 +48,9 @@ fun LoginScreen(
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
 
+    var showForgotDialog by remember { mutableStateOf(false) }
+    var forgotEmail by remember { mutableStateOf("") }
+
     LaunchedEffect(uiState) {
         if (uiState is AuthUiState.Authenticated) {
             onLoginSuccess()
@@ -57,6 +62,7 @@ fun LoginScreen(
             .fillMaxSize()
             .background(BackgroundLight)
             .padding(horizontal = 24.dp)
+            .verticalScroll(rememberScrollState())
             .systemBarsPadding(),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
@@ -169,6 +175,46 @@ fun LoginScreen(
             singleLine = true
         )
 
+        // Forgot password link
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 4.dp),
+            contentAlignment = Alignment.CenterStart
+        ) {
+            TextButton(
+                onClick = {
+                    forgotEmail = email.trim()
+                    showForgotDialog = true
+                },
+                contentPadding = PaddingValues(0.dp)
+            ) {
+                Text(
+                    text = "نسيت كلمة المرور؟",
+                    color = Primary,
+                    style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold)
+                )
+            }
+        }
+
+        // Notification when password reset link sent
+        if (uiState is AuthUiState.PasswordResetSent) {
+            val sentEmail = (uiState as AuthUiState.PasswordResetSent).email
+            Spacer(modifier = Modifier.height(8.dp))
+            Surface(
+                color = Success.copy(alpha = 0.12f),
+                shape = RoundedCornerShape(8.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = "تم إرسال رابط استعادة كلمة المرور إلى $sentEmail بنجاح",
+                    color = Success,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(10.dp)
+                )
+            }
+        }
+
         // Error message if present
         if (uiState is AuthUiState.Error) {
             Spacer(modifier = Modifier.height(8.dp))
@@ -179,7 +225,7 @@ fun LoginScreen(
             )
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(20.dp))
 
         AmanButton(
             text = if (uiState is AuthUiState.Loading) "جاري التحقق..." else "دخول",
@@ -199,5 +245,54 @@ fun LoginScreen(
                 fontWeight = FontWeight.SemiBold
             )
         }
+    }
+
+    // Forgot Password Dialog
+    if (showForgotDialog) {
+        AlertDialog(
+            onDismissRequest = { showForgotDialog = false },
+            title = {
+                Text(
+                    text = "استعادة كلمة المرور",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                )
+            },
+            text = {
+                Column {
+                    Text(
+                        text = "أدخل بريدك الإلكتروني المسجل في أمان لإرسال رابط إعادة تعيين كلمة المرور.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextSecondary
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    OutlinedTextField(
+                        value = forgotEmail,
+                        onValueChange = { forgotEmail = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("البريد الإلكتروني") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                        singleLine = true,
+                        shape = RoundedCornerShape(8.dp)
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.resetPassword(forgotEmail)
+                        showForgotDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Primary),
+                    enabled = forgotEmail.isNotBlank()
+                ) {
+                    Text("إرسال الرابط")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showForgotDialog = false }) {
+                    Text("إلغاء", color = TextSecondary)
+                }
+            }
+        )
     }
 }
