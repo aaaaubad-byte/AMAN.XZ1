@@ -5,17 +5,37 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.aman.app.core.result.AmanResult
+import com.aman.app.data.model.SystemSettings
+import com.aman.app.data.repository.AdminRepository
+import com.aman.app.data.repository.AdminRepositoryImpl
 import com.aman.app.ui.components.AmanCard
 import com.aman.app.ui.components.AmanTopAppBar
 import com.aman.app.ui.theme.*
+import kotlinx.coroutines.launch
 
 @Composable
-fun PrivacyScreen(onBack: () -> Unit) {
+fun PrivacyScreen(
+    onBack: () -> Unit,
+    adminRepo: AdminRepository = remember { AdminRepositoryImpl() }
+) {
+    var settings by remember { mutableStateOf<SystemSettings?>(null) }
+    val scope = rememberCoroutineScope()
+
+    LaunchedEffect(Unit) {
+        scope.launch {
+            when (val res = adminRepo.getSystemSettings()) {
+                is AmanResult.Success -> settings = res.data
+                is AmanResult.Error -> {}
+            }
+        }
+    }
+
     Scaffold(
         topBar = {
             AmanTopAppBar(
@@ -54,25 +74,45 @@ fun PrivacyScreen(onBack: () -> Unit) {
                     }
                 }
 
-                PrivacyItemCard(
-                    title = "1. البيانات التي نجمعها",
-                    content = "نقتصر على جمع البيانات الضرورية لتقديم الخدمة: اسم العميل، البريد الإلكتروني، أرقام الهواتف المراد حمايتها، وبيانات سندات التحويل المالي."
-                )
-
-                PrivacyItemCard(
-                    title = "2. الغرض من معالجة البيانات",
-                    content = "تُستخدم البيانات فقط لغايات توثيق الحساب، والتواصل بشأن مواعيد التجديد، وتنفيذ عمليات التنشيط المطلوبة لدى مزودي الاتصالات."
-                )
-
-                PrivacyItemCard(
-                    title = "3. عدم مشاركة البيانات مع أطراف خارجية",
-                    content = "نلتزم بعدم بيع، أو تأجير، أو مشاركة أي من بيانات العملاء أو أرقامهم مع أي جهات خارجية أو إعلانية تحت أي ظرف."
-                )
-
-                PrivacyItemCard(
-                    title = "4. الحماية والتشفير وقواعد RLS",
-                    content = "تعتمد بنيتنا التحتية على أحدث تقنيات التشفير وقواعد أمان على مستوى الصفوف (Row Level Security)، مما يضمن عدم قدرة أي مستخدم على الاطلاع على أرقام أو بيانات عميل آخر."
-                )
+                val customPrivacy = settings?.privacyPolicy
+                if (!customPrivacy.isNullOrBlank()) {
+                    AmanCard {
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            Text(
+                                text = "سياسة الخصوصية المعتمدة",
+                                style = MaterialTheme.typography.titleSmall.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = Primary
+                                )
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = customPrivacy,
+                                style = MaterialTheme.typography.bodyMedium.copy(
+                                    color = TextPrimary,
+                                    lineHeight = 22.sp
+                                )
+                            )
+                        }
+                    }
+                } else {
+                    PrivacyItemCard(
+                        title = "1. البيانات التي نجمعها",
+                        content = "نقتصر على جمع البيانات الضرورية لتقديم الخدمة: اسم العميل، البريد الإلكتروني، أرقام الهواتف المراد حمايتها، وبيانات سندات التحويل المالي."
+                    )
+                    PrivacyItemCard(
+                        title = "2. الغرض من معالجة البيانات",
+                        content = "تُستخدم البيانات فقط لغايات توثيق الحساب، والتواصل بشأن مواعيد التجديد، وتنفيذ عمليات التنشيط المطلوبة لدى مزودي الاتصالات."
+                    )
+                    PrivacyItemCard(
+                        title = "3. عدم مشاركة البيانات مع أطراف خارجية",
+                        content = "نلتزم بعدم بيع، أو تأجير، أو مشاركة أي من بيانات العملاء أو أرقامهم مع أي جهات خارجية أو إعلانية تحت أي ظرف."
+                    )
+                    PrivacyItemCard(
+                        title = "4. الحماية والتشفير وقواعد RLS",
+                        content = "تعتمد بنيتنا التحتية على أحدث تقنيات التشفير وقواعد أمان على مستوى الصفوف (Row Level Security)، مما يضمن عدم قدرة أي مستخدم على الاطلاع على أرقام أو بيانات عميل آخر."
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(24.dp))
             }

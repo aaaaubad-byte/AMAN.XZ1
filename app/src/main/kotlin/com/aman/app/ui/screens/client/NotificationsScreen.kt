@@ -8,6 +8,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Warning
@@ -44,7 +45,17 @@ fun NotificationsScreen(
         topBar = {
             AmanTopAppBar(
                 title = "الإشعارات والتنبيهات",
-                onBackClick = onBack
+                onBackClick = onBack,
+                actions = {
+                    val state = uiState
+                    if (state is NotificationsUiState.Success && state.notifications.any { !it.isRead }) {
+                        TextButton(onClick = { viewModel.markAllAsRead(customerId) }) {
+                            Icon(Icons.Default.DoneAll, contentDescription = null, modifier = Modifier.size(18.dp), tint = Primary)
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("تحديد الكل كمقروء", style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold, color = Primary))
+                        }
+                    }
+                }
             )
         }
     ) { paddingValues ->

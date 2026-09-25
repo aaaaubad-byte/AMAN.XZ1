@@ -723,6 +723,7 @@ interface NotificationRepository {
     suspend fun getCustomerNotifications(customerId: String): AmanResult<List<AppNotification>>
     suspend fun getUnreadCount(customerId: String): AmanResult<Int>
     suspend fun markAsRead(notificationId: String): AmanResult<Unit>
+    suspend fun markAllAsRead(customerId: String): AmanResult<Unit>
 }
 
 class NotificationRepositoryImpl : NotificationRepository {

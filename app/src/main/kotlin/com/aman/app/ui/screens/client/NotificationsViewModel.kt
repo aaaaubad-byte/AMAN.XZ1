@@ -49,4 +49,12 @@ class NotificationsViewModel(
             loadNotifications(customerId)
         }
     }
+
+    fun markAllAsRead(customerId: String?) {
+        if (customerId.isNullOrBlank()) return
+        viewModelScope.launch {
+            notificationRepo.markAllAsRead(customerId)
+            loadNotifications(customerId)
+        }
+    }
 }
