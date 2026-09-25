@@ -43,7 +43,55 @@ class CustomerNumberRepositoryImpl : CustomerNumberRepository {
                 .select {
                     filter { eq("customer_id", customerId) }
                 }.decodeList<CustomerNumber>()
-            AmanResult.Success(list)
+
+            // Fetch active protections for this customer to dynamically compute protection status
+            val activeProtections = try {
+                AmanSupabase.postgrest.from("protections")
+                    .select {
+                        filter {
+                            eq("customer_id", customerId)
+                            eq("status", "active")
+                        }
+                    }.decodeList<Protection>()
+            } catch (_: Exception) {
+                emptyList()
+            }
+
+            // Fetch pending protection requests for this customer
+            val pendingRequests = try {
+                AmanSupabase.postgrest.from("protection_requests")
+                    .select {
+                        filter {
+                            eq("customer_id", customerId)
+                            eq("status", "pending")
+                        }
+                    }.decodeList<ProtectionRequest>()
+            } catch (_: Exception) {
+                emptyList()
+            }
+
+            // Fetch providers to enrich relations
+            val providers = try {
+                AmanSupabase.postgrest.from("telecom_providers").select().decodeList<TelecomProvider>()
+            } catch (_: Exception) {
+                emptyList()
+            }
+            val providerMap = providers.associateBy { it.id }
+
+            val enrichedList = list.map { num ->
+                val hasActive = activeProtections.any { it.customerNumberId == num.id }
+                val hasPending = pendingRequests.any { it.customerNumberId == num.id }
+                val computedStatus = when {
+                    hasActive -> NumberProtectionStatus.PROTECTED
+                    hasPending -> NumberProtectionStatus.PENDING
+                    else -> NumberProtectionStatus.UNPROTECTED
+                }
+                num.copy(
+                    provider = num.provider ?: providerMap[num.providerId],
+                    protectionStatus = computedStatus
+                )
+            }
+            AmanResult.Success(enrichedList)
         } catch (e: Exception) {
             AmanResult.Error(AmanError.DatabaseError("تعذر جلب أرقام العميل: ${e.message}", cause = e))
         }
@@ -54,7 +102,13 @@ class CustomerNumberRepositoryImpl : CustomerNumberRepository {
         return try {
             val list = AmanSupabase.postgrest.from("customer_numbers")
                 .select().decodeList<CustomerNumber>()
-            AmanResult.Success(list)
+            val providers = try {
+                AmanSupabase.postgrest.from("telecom_providers").select().decodeList<TelecomProvider>()
+            } catch (_: Exception) {
+                emptyList()
+            }
+            val providerMap = providers.associateBy { it.id }
+            AmanResult.Success(list.map { it.copy(provider = it.provider ?: providerMap[it.providerId]) })
         } catch (e: Exception) {
             AmanResult.Error(AmanError.DatabaseError("تعذر جلب الأرقام: ${e.message}", cause = e))
         }
@@ -63,16 +117,52 @@ class CustomerNumberRepositoryImpl : CustomerNumberRepository {
     override suspend fun addCustomerNumber(phoneNumber: String): AmanResult<CustomerNumber> {
         if (!AmanSupabase.isConfigured()) return AmanResult.Error(AmanError.ConfigurationError("Supabase غير مهيأ"))
         return try {
-            val params = buildJsonObject {
-                put("p_phone_number", phoneNumber.trim())
+            val cleanPhone = phoneNumber.filter { it.isDigit() }
+            // 1. Try RPC add_customer_number
+            val rpcResult = try {
+                val params = buildJsonObject {
+                    put("p_phone_number", cleanPhone)
+                }
+                AmanSupabase.postgrest.rpc(
+                    function = "add_customer_number",
+                    parameters = params
+                ).decodeAs<CustomerNumber>()
+            } catch (_: Exception) {
+                null
             }
-            val record = AmanSupabase.postgrest.rpc(
-                function = "add_customer_number",
-                parameters = params
-            ).decodeAs<CustomerNumber>()
-            AmanResult.Success(record)
+
+            if (rpcResult != null) return AmanResult.Success(rpcResult)
+
+            // 2. Direct insert fallback
+            val user = AmanSupabase.auth.currentUserOrNull()
+                ?: return AmanResult.Error(AmanError.AuthenticationError("يجب تسجيل الدخول لإضافة رقم"))
+
+            val detectedProv = when (val pRes = detectProviderFromPrefix(cleanPhone)) {
+                is AmanResult.Success -> pRes.data
+                else -> null
+            } ?: return AmanResult.Error(AmanError.ValidationError("لم يتم التعرف على شركة الاتصالات التابع لها هذا الرقم"))
+
+            val insertData = buildJsonObject {
+                put("customer_id", user.id)
+                put("provider_id", detectedProv.id)
+                put("phone_number", cleanPhone)
+                put("status", "active")
+                put("protection_status", "unprotected")
+            }
+
+            val inserted = AmanSupabase.postgrest.from("customer_numbers")
+                .insert(insertData) {
+                    select()
+                }.decodeSingle<CustomerNumber>()
+
+            AmanResult.Success(inserted.copy(provider = detectedProv, protectionStatus = NumberProtectionStatus.UNPROTECTED))
         } catch (e: Exception) {
-            AmanResult.Error(AmanError.DatabaseError("تعذر تسجيل الرقم: ${e.message}", cause = e))
+            val msg = if (e.message?.contains("unique", ignoreCase = true) == true) {
+                "هذا الرقم مسجل بالفعل في حسابك"
+            } else {
+                "تعذر تسجيل الرقم: ${e.message}"
+            }
+            AmanResult.Error(AmanError.DatabaseError(msg, cause = e))
         }
     }
 
@@ -83,25 +173,70 @@ class CustomerNumberRepositoryImpl : CustomerNumberRepository {
     override suspend fun detectProviderFromPrefix(prefix: String): AmanResult<TelecomProvider?> {
         if (!AmanSupabase.isConfigured()) return AmanResult.Error(AmanError.ConfigurationError("Supabase غير مهيأ"))
         return try {
-            val params = buildJsonObject {
-                put("p_phone_number", prefix.trim())
-            }
-            val providerId = AmanSupabase.postgrest.rpc(
-                function = "detect_provider_for_number",
-                parameters = params
-            ).decodeAsOrNull<String>()
+            val cleanDigits = prefix.filter { it.isDigit() }
+            if (cleanDigits.length < 2) return AmanResult.Success(null)
 
-            if (providerId.isNullOrBlank()) {
-                AmanResult.Success(null)
-            } else {
+            // 1. Try DB RPC get_provider_by_prefix
+            val providerIdFromRpc = try {
+                val params = buildJsonObject {
+                    put("p_phone_number", cleanDigits)
+                }
+                AmanSupabase.postgrest.rpc(
+                    function = "get_provider_by_prefix",
+                    parameters = params
+                ).decodeAsOrNull<String>()
+            } catch (_: Exception) {
+                null
+            }
+
+            if (!providerIdFromRpc.isNullOrBlank()) {
                 val provider = AmanSupabase.postgrest.from("telecom_providers")
                     .select {
-                        filter { eq("id", providerId) }
+                        filter { eq("id", providerIdFromRpc) }
                     }.decodeSingleOrNull<TelecomProvider>()
-                AmanResult.Success(provider)
+                if (provider != null) return AmanResult.Success(provider)
             }
+
+            // 2. Query telecom_prefixes table
+            val subPrefixes = listOf(cleanDigits.take(4), cleanDigits.take(3), cleanDigits.take(2))
+            for (sub in subPrefixes) {
+                val prefixRecord = try {
+                    AmanSupabase.postgrest.from("telecom_prefixes")
+                        .select {
+                            filter {
+                                eq("prefix", sub)
+                                eq("is_active", true)
+                            }
+                        }.decodeList<TelecomPrefix>().firstOrNull()
+                } catch (_: Exception) {
+                    null
+                }
+                if (prefixRecord != null) {
+                    val provider = AmanSupabase.postgrest.from("telecom_providers")
+                        .select {
+                            filter { eq("id", prefixRecord.providerId) }
+                        }.decodeSingleOrNull<TelecomProvider>()
+                    if (provider != null) return AmanResult.Success(provider)
+                }
+            }
+
+            // 3. Known Yemeni telecom providers fallback
+            val sub2 = cleanDigits.take(2)
+            val allProviders = try {
+                AmanSupabase.postgrest.from("telecom_providers").select().decodeList<TelecomProvider>()
+            } catch (_: Exception) {
+                emptyList()
+            }
+
+            val matched = when (sub2) {
+                "77", "78" -> allProviders.find { it.name.contains("يمن") || it.name.contains("Yemen") }
+                "73" -> allProviders.find { it.name.contains("يو") || it.name.contains("YOU") }
+                "71" -> allProviders.find { it.name.contains("سبأ") || it.name.contains("Saba") }
+                "70" -> allProviders.find { it.name.contains("واي") || it.name.contains("Y ") || it.name == "Y" }
+                else -> null
+            }
+            AmanResult.Success(matched)
         } catch (e: Exception) {
-            // If prefix is incomplete, treat gracefully
             AmanResult.Success(null)
         }
     }
@@ -112,8 +247,41 @@ class CustomerNumberRepositoryImpl : CustomerNumberRepository {
             val record = AmanSupabase.postgrest.from("customer_numbers")
                 .select {
                     filter { eq("id", numberId) }
-                }.decodeSingleOrNull<CustomerNumber>()
-            AmanResult.Success(record)
+                }.decodeSingleOrNull<CustomerNumber>() ?: return AmanResult.Success(null)
+
+            val provider = try {
+                AmanSupabase.postgrest.from("telecom_providers")
+                    .select { filter { eq("id", record.providerId) } }
+                    .decodeSingleOrNull<TelecomProvider>()
+            } catch (_: Exception) { null }
+
+            val hasActive = try {
+                AmanSupabase.postgrest.from("protections")
+                    .select {
+                        filter {
+                            eq("customer_number_id", numberId)
+                            eq("status", "active")
+                        }
+                    }.decodeList<Protection>().isNotEmpty()
+            } catch (_: Exception) { false }
+
+            val hasPending = try {
+                AmanSupabase.postgrest.from("protection_requests")
+                    .select {
+                        filter {
+                            eq("customer_number_id", numberId)
+                            eq("status", "pending")
+                        }
+                    }.decodeList<ProtectionRequest>().isNotEmpty()
+            } catch (_: Exception) { false }
+
+            val status = when {
+                hasActive -> NumberProtectionStatus.PROTECTED
+                hasPending -> NumberProtectionStatus.PENDING
+                else -> NumberProtectionStatus.UNPROTECTED
+            }
+
+            AmanResult.Success(record.copy(provider = provider, protectionStatus = status))
         } catch (e: Exception) {
             AmanResult.Error(AmanError.DatabaseError("تعذر جلب تفاصيل الرقم: ${e.message}", cause = e))
         }
@@ -296,19 +464,72 @@ class ProtectionRequestRepositoryImpl : ProtectionRequestRepository {
                 put("reference", transferData.trim())
                 put("note", transferData.trim())
             }
-            val params = buildJsonObject {
-                put("p_customer_number_id", customerNumberId)
-                put("p_plan_id", planId)
-                put("p_payment_method_id", paymentMethodId)
-                put("p_transfer_data", transferDataObj)
+
+            // 1. Try RPC create_protection_request if available
+            val rpcResult = try {
+                val params = buildJsonObject {
+                    put("p_customer_number_id", customerNumberId)
+                    put("p_plan_id", planId)
+                    put("p_payment_method_id", paymentMethodId)
+                    put("p_transfer_data", transferDataObj)
+                }
+                AmanSupabase.postgrest.rpc(
+                    function = "create_protection_request",
+                    parameters = params
+                ).decodeAs<ProtectionRequest>()
+            } catch (_: Exception) {
+                null
             }
-            val record = AmanSupabase.postgrest.rpc(
-                function = "create_protection_request",
-                parameters = params
-            ).decodeAs<ProtectionRequest>()
-            AmanResult.Success(record)
+
+            if (rpcResult != null) return AmanResult.Success(rpcResult)
+
+            // 2. Direct insert fallback
+            val user = AmanSupabase.auth.currentUserOrNull()
+                ?: return AmanResult.Error(AmanError.AuthenticationError("يجب تسجيل الدخول لتقديم طلب الحماية"))
+
+            val number = AmanSupabase.postgrest.from("customer_numbers")
+                .select { filter { eq("id", customerNumberId) } }
+                .decodeSingle<CustomerNumber>()
+
+            val plan = AmanSupabase.postgrest.from("protection_plans")
+                .select { filter { eq("id", planId) } }
+                .decodeSingle<ProtectionPlan>()
+
+            val insertData = buildJsonObject {
+                put("customer_id", user.id)
+                put("customer_number_id", customerNumberId)
+                put("provider_id", number.providerId)
+                put("plan_id", planId)
+                put("payment_method_id", paymentMethodId)
+                put("protection_value", plan.price)
+                put("plan_name_snapshot", plan.name)
+                put("plan_duration_days_snapshot", plan.durationDays)
+                put("transfer_data", transferDataObj)
+                put("status", "pending")
+            }
+
+            val inserted = AmanSupabase.postgrest.from("protection_requests")
+                .insert(insertData) {
+                    select()
+                }.decodeSingle<ProtectionRequest>()
+
+            try {
+                AmanSupabase.postgrest.from("customer_numbers").update({
+                    set("protection_status", "pending")
+                }) {
+                    filter { eq("id", customerNumberId) }
+                }
+            } catch (_: Exception) {}
+
+            AmanResult.Success(inserted)
         } catch (e: Exception) {
-            AmanResult.Error(AmanError.DatabaseError("تعذر إرسال طلب الحماية: ${e.message}", cause = e))
+            val msg = if (e.message?.contains("unique_pending_request_per_number", ignoreCase = true) == true ||
+                e.message?.contains("CONFLICTING_REQUEST_EXISTS", ignoreCase = true) == true) {
+                "يوجد بالفعل طلب حماية قيد المراجعة لهذا الرقم"
+            } else {
+                "تعذر إرسال طلب الحماية: ${e.message}"
+            }
+            AmanResult.Error(AmanError.DatabaseError(msg, cause = e))
         }
     }
 }
@@ -429,13 +650,21 @@ class NotificationRepositoryImpl : NotificationRepository {
     override suspend fun markAsRead(notificationId: String): AmanResult<Unit> {
         if (!AmanSupabase.isConfigured()) return AmanResult.Error(AmanError.ConfigurationError("Supabase غير مهيأ"))
         return try {
-            val params = buildJsonObject {
-                put("p_notification_id", notificationId)
+            try {
+                val params = buildJsonObject {
+                    put("p_notification_id", notificationId)
+                }
+                AmanSupabase.postgrest.rpc(
+                    function = "mark_notification_read",
+                    parameters = params
+                )
+            } catch (_: Exception) {
+                AmanSupabase.postgrest.from("notifications").update({
+                    set("is_read", true)
+                }) {
+                    filter { eq("id", notificationId) }
+                }
             }
-            AmanSupabase.postgrest.rpc(
-                function = "mark_notification_read",
-                parameters = params
-            )
             AmanResult.Success(Unit)
         } catch (e: Exception) {
             AmanResult.Error(AmanError.DatabaseError("تعذر تحديث الإشعار: ${e.message}", cause = e))

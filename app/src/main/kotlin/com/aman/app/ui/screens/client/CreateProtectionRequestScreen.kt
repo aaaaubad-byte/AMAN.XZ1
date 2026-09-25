@@ -147,7 +147,11 @@ fun CreateProtectionRequestScreen(
                                                     )
                                                 )
                                             }
-                                            ProviderBadge(providerName = number.provider?.name ?: "")
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                NumberProtectionBadge(status = number.protectionStatus)
+                                                Spacer(modifier = Modifier.width(6.dp))
+                                                ProviderBadge(providerName = number.provider?.name ?: "")
+                                            }
                                         }
                                     }
                                 }
@@ -366,11 +370,28 @@ fun CreateProtectionRequestScreen(
 
                                     Spacer(modifier = Modifier.height(16.dp))
 
+                                    if (selectedNumber?.protectionStatus == NumberProtectionStatus.PENDING) {
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .background(Color(0xFFFEF3C7), RoundedCornerShape(8.dp))
+                                                .padding(10.dp)
+                                        ) {
+                                            Text(
+                                                text = "تنبيه: يوجد طلب حماية قيد المراجعة لهذا الرقم حالياً. لا يمكن تقديم طلب إضافي حتى تتم معالجة الطلب السابق.",
+                                                color = Color(0xFF92400E),
+                                                style = MaterialTheme.typography.bodySmall
+                                            )
+                                        }
+                                        Spacer(modifier = Modifier.height(12.dp))
+                                    }
+
                                     AmanButton(
                                         text = if (isSubmitting) "جارٍ إرسال الطلب..." else "إرسال طلب الحماية للمراجعة",
                                         onClick = { viewModel.submitRequest(transferDataInput) },
                                         enabled = !isSubmitting &&
                                                 selectedNumber != null &&
+                                                selectedNumber.protectionStatus != NumberProtectionStatus.PENDING &&
                                                 selectedPlan != null &&
                                                 selectedPaymentMethod != null &&
                                                 transferDataInput.isNotBlank()

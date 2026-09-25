@@ -91,7 +91,9 @@ class ProtectionRequestsViewModel(
             if (numbersRes is AmanResult.Success && paymentMethodsRes is AmanResult.Success) {
                 val numbers = numbersRes.data
                 val paymentMethods = paymentMethodsRes.data
-                val preselected = numbers.find { it.id == preselectedNumberId } ?: numbers.firstOrNull()
+                val preselected = numbers.find { it.id == preselectedNumberId }
+                    ?: numbers.find { it.protectionStatus == NumberProtectionStatus.UNPROTECTED }
+                    ?: numbers.firstOrNull()
 
                 val plans = if (preselected != null) {
                     when (val plansRes = planRepo.getPlansByProvider(preselected.providerId)) {
@@ -155,6 +157,10 @@ class ProtectionRequestsViewModel(
 
         if (number == null) {
             _createState.value = CreateRequestUiState.Error("يرجى اختيار رقم الهاتف المراد حمايته")
+            return
+        }
+        if (number.protectionStatus == NumberProtectionStatus.PENDING) {
+            _createState.value = CreateRequestUiState.Error("يوجد بالفعل طلب حماية قيد المراجعة لهذا الرقم. يرجى انتظار قرار الإدارة قبل تقديم طلب جديد.")
             return
         }
         if (plan == null) {

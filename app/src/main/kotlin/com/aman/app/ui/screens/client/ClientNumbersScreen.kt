@@ -84,7 +84,7 @@ fun ClientNumbersScreen(
                         EmptyView(
                             icon = Icons.Default.PhoneIphone,
                             title = "لا توجد أرقام مسجلة",
-                            description = "لم تقم بإضافة أي رقم حتى الآن. أضف رقمك لتأمينه وحمايته من الإلغاء.",
+                            description = "لم تقم بإضافة أي رقم حتى الآن. أضف أرقامك لتتمكن من حمايتها وإدارتها بسهولة.",
                             buttonText = "إضافة رقمك الآن",
                             onButtonClick = onNavigateToAddNumber
                         )
@@ -169,7 +169,7 @@ private fun CustomerNumberItemCard(
                         colors = ButtonDefaults.buttonColors(containerColor = Primary),
                         contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
                     ) {
-                        Text("طلب حماية الرقم", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                        Text("تفعيل الحماية", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                     }
                 }
             }

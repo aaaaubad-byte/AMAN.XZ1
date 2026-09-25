@@ -75,7 +75,7 @@ fun AddNumberScreen(
                         Spacer(modifier = Modifier.width(12.dp))
                         Column {
                             Text(
-                                text = "التعرف التلقائي على مزود الخدمة",
+                                text = "تسجيل الرقم والتعرف التلقائي على المزود",
                                 style = MaterialTheme.typography.titleSmall.copy(
                                     fontWeight = FontWeight.Bold,
                                     color = TextPrimary
@@ -83,7 +83,7 @@ fun AddNumberScreen(
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = "يقوم النظام تلقائياً بتحديد شركة الاتصالات التابع لها رقمك بمجرد كتابته استناداً إلى بادئة الرقم، دون الحاجة للاختيار اليدوي.",
+                                text = "ملاحظة: إضافة الرقم تدرجه في قائمة أرقامك المعتمدة فقط، ولا تعني بدء سريان الحماية. يمكنك طلب تفعيل الحماية واختيار الباقة كإجراء مستقل لاحقاً.",
                                 style = MaterialTheme.typography.bodySmall.copy(
                                     color = TextSecondary,
                                     fontSize = 13.sp
@@ -100,7 +100,7 @@ fun AddNumberScreen(
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         Text(
-                            text = "رقم الهاتف المراد حمايته",
+                            text = "رقم الهاتف الجديد",
                             style = MaterialTheme.typography.titleMedium.copy(
                                 fontWeight = FontWeight.Bold,
                                 color = TextPrimary

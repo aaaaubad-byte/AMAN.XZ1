@@ -303,7 +303,7 @@ data class Protection(
     /**
      * "تحتاج تجديد" حالة محسوبة ديناميكياً وليست حالة مخزنة
      */
-    fun calculateDisplayStatus(warningDaysThreshold: Int = 7): ProtectionDisplayStatus {
+    fun calculateDisplayStatus(warningDaysThreshold: Int = 30): ProtectionDisplayStatus {
         if (status == StoredProtectionStatus.EXPIRED) return ProtectionDisplayStatus.EXPIRED
         val remaining = daysRemaining()
         return when {
